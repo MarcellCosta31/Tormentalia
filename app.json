@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "O Caro Deus Mercado",
+    "slug": "ocarodeusmercado",
+    "version": "1.0.0",
+    "orientation": "landscape",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#0A0A1A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ocarodeusmercado"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0A1A"
+      },
+      "package": "com.ocarodeusmercado"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [],
+    "experiments": {
+      "orientation": "landscape"
+    }
+  }
+}
