@@ -1,42 +1,22 @@
 import React, { createContext, useContext, useReducer, useCallback } from 'react';
-import { criarEstadoInicial, jogarCarta as jogarCartaEngine, fimDeTurno as fimDeTurnoEngine, descartarCarta as descartarCartaEngine } from '../hooks/useCombat';
-import { TIPO_CARTA } from '../cards/baralhoCartas';
+import { criarEstadoInicial, criarEstadoMultiplayer, jogarCarta as jogarCartaEngine, fimDeTurno as fimDeTurnoEngine, descartarCarta as descartarCartaEngine } from '../hooks/useCombat';
+import { comprarCarta as comprarCartaBaralho } from '../cards/baralhoCartas';
 
 const GameContext = createContext(null);
-
-function executarTurnoIA(state) {
-  const jogadorIA = state.jogadores[1];
-  if (!jogadorIA || jogadorIA.falido) {
-    return fimDeTurnoEngine(state);
-  }
-
-  let estadoAtual = { ...state };
-  const ia = { ...estadoAtual.jogadores[1] };
-
-  const cartasJogaveis = ia.mao.filter(
-    (c) => c.tipo === TIPO_CARTA.ACAO || c.tipo === TIPO_CARTA.CORINGA || c.tipo === TIPO_CARTA.EFEITO || c.tipo === TIPO_CARTA.PROTECAO
-  );
-
-  if (cartasJogaveis.length > 0) {
-    const carta = cartasJogaveis[Math.floor(Math.random() * cartasJogaveis.length)];
-
-    estadoAtual = jogarCartaEngine(estadoAtual, ia.id, carta.uid, carta.precisaAlvo ? 1 : null);
-  }
-
-  const iaAtualizado = { ...estadoAtual.jogadores[1] };
-  if (iaAtualizado.mao.length > 0) {
-    const idxDescarte = Math.floor(Math.random() * iaAtualizado.mao.length);
-    const cartaDescarte = iaAtualizado.mao[idxDescarte];
-    estadoAtual = descartarCartaEngine(estadoAtual, iaAtualizado.id, cartaDescarte.uid);
-  }
-
-  return fimDeTurnoEngine(estadoAtual);
-}
 
 function gameReducer(state, action) {
   switch (action.type) {
     case 'INICIAR':
       return criarEstadoInicial();
+
+    case 'INICIAR_MULTIPLAYER': {
+      const { nomeJogador1, nomeJogador2 } = action.payload;
+      return criarEstadoMultiplayer(nomeJogador1, nomeJogador2);
+    }
+
+    case 'SET_MULTIPLAYER_STATE': {
+      return action.payload;
+    }
 
     case 'JOGAR_CARTA': {
       const { jogadorId, cartaUid, jogadorAlvoId } = action.payload;
@@ -51,8 +31,40 @@ function gameReducer(state, action) {
     case 'PASSAR_TURNO':
       return fimDeTurnoEngine(state);
 
-    case 'EXECUTAR_TURNO_IA':
-      return executarTurnoIA(state);
+    case 'IA_JOGAR_CARTA': {
+      const ia = state.jogadores[1];
+      if (!ia || ia.falido || ia.mao.length === 0) {
+        return { ...state, iaAnimacao: { tipo: 'fim' } };
+      }
+      const carta = ia.mao[Math.floor(Math.random() * ia.mao.length)];
+      const novoEstado = jogarCartaEngine(state, 2, carta.uid, carta.precisaAlvo ? 1 : null);
+      return { ...novoEstado, iaAnimacao: { tipo: 'jogar', cartaUid: carta.uid } };
+    }
+
+    case 'IA_COMPRAR_CARTA': {
+      const novoEstado = { ...state };
+      const ia = { ...novoEstado.jogadores[1] };
+      const resultado = comprarCartaBaralho(novoEstado.baralho, ia.mao, 1);
+      ia.mao = resultado.mao;
+      novoEstado.baralho = resultado.baralho;
+      const novosJogadores = [...novoEstado.jogadores];
+      novosJogadores[1] = ia;
+      return { ...novoEstado, jogadores: novosJogadores, iaAnimacao: { tipo: 'comprar' } };
+    }
+
+    case 'IA_DESCARTAR_CARTA': {
+      const { cartaUid } = action.payload;
+      return descartarCartaEngine(state, 2, cartaUid);
+    }
+
+    case 'IA_FIM_TURNO':
+      return { ...fimDeTurnoEngine(state), iaAnimacao: null };
+
+    case 'IA_LIMPAR_ANIMACAO':
+      return { ...state, iaAnimacao: null };
+
+    case 'BATALHA_INICIADA':
+      return { ...state, batalhaIniciada: true };
 
     case 'RESET':
       return criarEstadoInicial();

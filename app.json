@@ -6,7 +6,7 @@
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "backgroundColor": "#0A0A1A"
     },
@@ -23,9 +23,16 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [],
+    "plugins": [
+      "@isvend/expo-udp"
+    ],
     "experiments": {
       "orientation": "landscape"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "d4fe95f6-5eb1-4596-8ed5-d0c5067ef965"
+      }
     }
   }
 }

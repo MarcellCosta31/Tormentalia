@@ -16,15 +16,23 @@ const DECK_HEIGHT = 81;
 export default function DecksArea({ baralho, pilhaDescarte, onLayout }) {
   const qtdBaralho = baralho?.length || 0;
   const qtdDescarte = pilhaDescarte?.length || 0;
+  const drawPosRef = React.useRef(null);
+  const descPosRef = React.useRef(null);
 
   const handleDrawLayout = useCallback((e) => {
     const { x, y } = e.nativeEvent.layout;
-    if (onLayout) onLayout(x, y, 0, 0);
+    drawPosRef.current = { x, y };
+    if (drawPosRef.current && descPosRef.current && onLayout) {
+      onLayout(drawPosRef.current.x, drawPosRef.current.y, descPosRef.current.x, descPosRef.current.y);
+    }
   }, [onLayout]);
 
   const handleDescarteLayout = useCallback((e) => {
     const { x, y } = e.nativeEvent.layout;
-    if (onLayout) onLayout(0, 0, x, y);
+    descPosRef.current = { x, y };
+    if (drawPosRef.current && descPosRef.current && onLayout) {
+      onLayout(drawPosRef.current.x, drawPosRef.current.y, descPosRef.current.x, descPosRef.current.y);
+    }
   }, [onLayout]);
 
   return (

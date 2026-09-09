@@ -1,33 +1,42 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 
 const CANTO_SIZE = 8;
 
 export default function TurnoIndicador({ nomeJogadorAtivo, turnoAtual, totalTurnos }) {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.05, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [nomeJogadorAtivo]);
+
+  const nomeFormatado = nomeJogadorAtivo === 'JOGADOR_HUMANO' ? 'SEU TURNO' : 'TURNO DO OPONENTE';
+
   return (
     <View style={styles.outerWrapper}>
-      {/* Correntes de sustentação topo */}
       <View style={styles.correntesRow}>
         <View style={styles.corrente} />
         <View style={styles.corrente} />
       </View>
 
-      {/* Placa de Madeira */}
       <View style={styles.placaContainer}>
-        <Text style={styles.labelVez}>A VEZ: {nomeJogadorAtivo?.toUpperCase() || 'JOGADOR'}</Text>
-
-        <View style={styles.setasRow}>
-          <View style={styles.setaBox}>
-            <Text style={styles.seta}>↪</Text>
-          </View>
-          <View style={styles.setaBox}>
-            <Text style={styles.seta}>↩</Text>
-          </View>
+        <View style={[styles.vezBadge, { backgroundColor: nomeJogadorAtivo === 'JOGADOR_HUMANO' ? '#2E7D32' : '#C62828' }]}>
+          <Text style={styles.vezBadgeTexto}>{nomeFormatado}</Text>
         </View>
 
-        <Text style={styles.turnoTexto}>TURNO: {turnoAtual}/{totalTurnos}</Text>
+        <View style={styles.turnoContainer}>
+          <Text style={styles.turnoLabel}>TURNO</Text>
+          <Animated.View style={[styles.turnoNumero, { transform: [{ scale: pulseAnim }] }]}>
+            <Text style={styles.turnoNumeroTexto}>{turnoAtual}</Text>
+          </Animated.View>
+          <Text style={styles.turnoTotal}>/ {totalTurnos}</Text>
+        </View>
 
-        {/* Moldura de cantos dourados */}
         <View style={[styles.canto, styles.cantoTL]} />
         <View style={[styles.canto, styles.cantoTR]} />
         <View style={[styles.canto, styles.cantoBL]} />
@@ -57,13 +66,13 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   placaContainer: {
-    backgroundColor: '#4A2E1B',
+    backgroundColor: '#3E2723',
     borderWidth: 2.5,
     borderColor: '#7C4A27',
-    borderRadius: 6,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    minWidth: 135,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    minWidth: 140,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -71,43 +80,44 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 6,
   },
-  labelVez: {
-    fontSize: 11,
-    color: '#FFF8E7',
+  vezBadge: {
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginBottom: 6,
+  },
+  vezBadgeTexto: {
+    fontSize: 10,
+    color: '#FFF',
     fontWeight: 'bold',
     letterSpacing: 1,
-    marginBottom: 4,
-    textShadowColor: '#000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
-  setasRow: {
+  turnoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 4,
   },
-  setaBox: {
-    width: 28,
-    height: 24,
-    borderRadius: 5,
-    backgroundColor: '#2E1A0F',
-    borderWidth: 1,
-    borderColor: '#D4AF6A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 4,
-  },
-  seta: {
-    fontSize: 14,
-    color: '#FFD54F',
-    fontWeight: 'bold',
-  },
-  turnoTexto: {
-    fontSize: 12,
-    color: '#FFECB3',
+  turnoLabel: {
+    fontSize: 10,
+    color: '#BCAAA4',
     fontWeight: 'bold',
     letterSpacing: 1,
-    marginTop: 2,
+    marginRight: 6,
+  },
+  turnoNumero: {
+    backgroundColor: '#FFD54F',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  turnoNumeroTexto: {
+    fontSize: 14,
+    color: '#3E2723',
+    fontWeight: 'bold',
+  },
+  turnoTotal: {
+    fontSize: 11,
+    color: '#BCAAA4',
+    marginLeft: 4,
   },
   canto: {
     position: 'absolute',
@@ -120,4 +130,3 @@ const styles = StyleSheet.create({
   cantoBL: { bottom: -2, left: -2, borderBottomWidth: 2, borderLeftWidth: 2 },
   cantoBR: { bottom: -2, right: -2, borderBottomWidth: 2, borderRightWidth: 2 },
 });
-

@@ -61,13 +61,13 @@ function verificarVitoria(jogadores, turnoAtual) {
   const j1 = jogadores[0];
   const j2 = jogadores[1];
 
-  if (j1.falido && !j2.falido) return { vencedor: 2, motivo: 'Vitoria por Eliminacao: O Oponente venceu!' };
-  if (j2.falido && !j1.falido) return { vencedor: 1, motivo: 'Vitoria por Eliminacao: Voce venceu!' };
+  if (j1.falido && !j2.falido) return { vencedor: 2, motivo: 'Vitoria por Eliminacao!' };
+  if (j2.falido && !j1.falido) return { vencedor: 1, motivo: 'Vitoria por Eliminacao!' };
   if (j1.falido && j2.falido) return { vencedor: 0, motivo: 'Empate: Ambos faliram!' };
 
   if (turnoAtual > MAX_TURNOS) {
-    if (j1.saldo > j2.saldo) return { vencedor: 1, motivo: 'Vitoria por Tempo: Voce tem o maior saldo!' };
-    if (j2.saldo > j1.saldo) return { vencedor: 2, motivo: 'Vitoria por Tempo: O Oponente tem o maior saldo!' };
+    if (j1.saldo > j2.saldo) return { vencedor: 1, motivo: 'Vitoria por Tempo: Maior saldo!' };
+    if (j2.saldo > j1.saldo) return { vencedor: 2, motivo: 'Vitoria por Tempo: Maior saldo!' };
     return { vencedor: 0, motivo: 'Empate: Saldo identico!' };
   }
 
@@ -83,10 +83,12 @@ export function criarEstadoInicial() {
   const resultadoCompra1 = comprarCartaBaralho(baralhoEmbaralhado, jogadorLocal.mao, CARTAS_POR_MAO);
   const resultadoCompra2 = comprarCartaBaralho(resultadoCompra1.baralho, oponenteIA.mao, CARTAS_POR_MAO);
 
+  const primeiroJogador = Math.random() < 0.5 ? 0 : 1;
+
   return {
     turnoAtual: 1,
     maxTurnos: MAX_TURNOS,
-    jogadorAtivoIndex: 0,
+    jogadorAtivoIndex: primeiroJogador,
     direcaoTurno: 1,
     baralho: resultadoCompra2.baralho,
     pilhaDescarte: [],
@@ -96,6 +98,36 @@ export function criarEstadoInicial() {
     ],
     fimDeJogo: null,
     log: [],
+    batalhaIniciada: false,
+  };
+}
+
+export function criarEstadoMultiplayer(nomeJogador1, nomeJogador2) {
+  const baralhoEmbaralhado = embaralharBaralho(gerarBaralhoCompleto());
+
+  const jogador1 = criarJogador(1, nomeJogador1, false);
+  const jogador2 = criarJogador(2, nomeJogador2, false);
+
+  const resultadoCompra1 = comprarCartaBaralho(baralhoEmbaralhado, jogador1.mao, CARTAS_POR_MAO);
+  const resultadoCompra2 = comprarCartaBaralho(resultadoCompra1.baralho, jogador2.mao, CARTAS_POR_MAO);
+
+  const primeiroJogador = Math.random() < 0.5 ? 0 : 1;
+
+  return {
+    turnoAtual: 1,
+    maxTurnos: MAX_TURNOS,
+    jogadorAtivoIndex: primeiroJogador,
+    direcaoTurno: 1,
+    baralho: resultadoCompra2.baralho,
+    pilhaDescarte: [],
+    jogadores: [
+      { ...jogador1, mao: resultadoCompra1.mao },
+      { ...jogador2, mao: resultadoCompra2.mao },
+    ],
+    fimDeJogo: null,
+    log: [],
+    batalhaIniciada: false,
+    isMultiplayer: true,
   };
 }
 
@@ -206,7 +238,7 @@ export function fimDeTurno(estado) {
   const proximoIdx = (idxJogador + 1) % 2;
   novoEstado.jogadorAtivoIndex = proximoIdx;
 
-  if (proximoIdx === 0) {
+  if (proximoIdx === 1) {
     novoEstado.turnoAtual += 1;
     novoEstado.direcaoTurno *= -1;
   }
