@@ -1,21 +1,35 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withRepeat,
+  withSequence,
+} from 'react-native-reanimated';
 
-const CANTO_SIZE = 8;
+const CANTO_SIZE = 6;
 
-export default function TurnoIndicador({ nomeJogadorAtivo, turnoAtual, totalTurnos }) {
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+export default function TurnoIndicador({ nomeJogadorAtivo, turnoAtual, totalTurnos, fluxoDirecao, isHumano }) {
+  const pulseAnim = useSharedValue(1);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseAnim.value }],
+  }));
 
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.05, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      ])
-    ).start();
+    pulseAnim.value = withRepeat(
+      withSequence(
+        withTiming(1.05, { duration: 800 }),
+        withTiming(1, { duration: 800 })
+      ),
+      -1,
+      false
+    );
   }, [nomeJogadorAtivo]);
 
-  const nomeFormatado = nomeJogadorAtivo === 'JOGADOR_HUMANO' ? 'SEU TURNO' : 'TURNO DO OPONENTE';
+  const fluxoLabel = fluxoDirecao === 1 ? '→ DIREITA' : '← ESQUERDA';
+  const nomeFormatado = `TURNO DE ${nomeJogadorAtivo}`;
 
   return (
     <View style={styles.outerWrapper}>
@@ -25,16 +39,20 @@ export default function TurnoIndicador({ nomeJogadorAtivo, turnoAtual, totalTurn
       </View>
 
       <View style={styles.placaContainer}>
-        <View style={[styles.vezBadge, { backgroundColor: nomeJogadorAtivo === 'JOGADOR_HUMANO' ? '#2E7D32' : '#C62828' }]}>
+        <View style={[styles.vezBadge, { backgroundColor: isHumano ? '#2E7D32' : '#C62828' }]}>
           <Text style={styles.vezBadgeTexto}>{nomeFormatado}</Text>
         </View>
 
         <View style={styles.turnoContainer}>
           <Text style={styles.turnoLabel}>TURNO</Text>
-          <Animated.View style={[styles.turnoNumero, { transform: [{ scale: pulseAnim }] }]}>
+          <Animated.View style={[styles.turnoNumero, pulseStyle]}>
             <Text style={styles.turnoNumeroTexto}>{turnoAtual}</Text>
           </Animated.View>
-          <Text style={styles.turnoTotal}>/ {totalTurnos}</Text>
+          <Text style={styles.turnoTotal}> / {totalTurnos}</Text>
+        </View>
+
+        <View style={styles.fluxoContainer}>
+          <Text style={styles.fluxoTexto}>{fluxoLabel}</Text>
         </View>
 
         <View style={[styles.canto, styles.cantoTL]} />
@@ -55,11 +73,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '70%',
     marginLeft: '15%',
-    height: 10,
+    height: 6,
   },
   corrente: {
-    width: 3,
-    height: 12,
+    width: 2,
+    height: 8,
     backgroundColor: '#9E9E9E',
     borderWidth: 1,
     borderColor: '#424242',
@@ -67,57 +85,72 @@ const styles = StyleSheet.create({
   },
   placaContainer: {
     backgroundColor: '#3E2723',
-    borderWidth: 2.5,
+    borderWidth: 2,
     borderColor: '#7C4A27',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    minWidth: 140,
+    borderRadius: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    minWidth: 100,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.5,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 6,
   },
   vezBadge: {
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginBottom: 6,
+    borderRadius: 3,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    marginBottom: 3,
   },
   vezBadgeTexto: {
-    fontSize: 10,
+    fontSize: 7,
     color: '#FFF',
     fontWeight: 'bold',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   turnoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   turnoLabel: {
-    fontSize: 10,
+    fontSize: 7,
     color: '#BCAAA4',
     fontWeight: 'bold',
-    letterSpacing: 1,
-    marginRight: 6,
+    letterSpacing: 0.5,
+    marginRight: 4,
   },
   turnoNumero: {
     backgroundColor: '#FFD54F',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
   },
   turnoNumeroTexto: {
-    fontSize: 14,
+    fontSize: 10,
     color: '#3E2723',
     fontWeight: 'bold',
   },
   turnoTotal: {
-    fontSize: 11,
+    fontSize: 8,
     color: '#BCAAA4',
-    marginLeft: 4,
+    marginLeft: 3,
+  },
+  fluxoContainer: {
+    marginTop: 3,
+    paddingVertical: 1,
+    paddingHorizontal: 5,
+    backgroundColor: 'rgba(255, 213, 79, 0.15)',
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: '#FFD54F',
+  },
+  fluxoTexto: {
+    fontSize: 7,
+    color: '#FFD54F',
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   canto: {
     position: 'absolute',

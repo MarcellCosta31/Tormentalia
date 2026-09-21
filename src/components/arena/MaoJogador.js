@@ -1,5 +1,15 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, Text, Animated, PanResponder, Dimensions, Pressable } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { View, StyleSheet, Text, Dimensions, Pressable } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  withDelay,
+  withSpring,
+  withRepeat,
+  interpolate,
+} from 'react-native-reanimated';
 import CartaArena from './CartaArena';
 import PainelStatus from './PainelStatus';
 import { soundManager } from '../../utils/sound';
@@ -7,105 +17,110 @@ import { soundManager } from '../../utils/sound';
 const CARD_WIDTH = 68;
 const CARD_HEIGHT = 95;
 const OVERLAP = 30;
-const DRAG_THRESHOLD = -80;
+const LIFT_SELECIONADA = 22;
+const LONG_PRESS_ZOOM_MS = 800;
+const STAGGER_DELAY = 80;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-function CartaAnimada({ carta, index, numCartas, desabilitado, falido, onPress, onJogar, prevPositions }) {
-  const animLeft = useRef(new Animated.Value(index * OVERLAP)).current;
-  const animTop = useRef(new Animated.Value(0)).current;
-  const animRotate = useRef(new Animated.Value(0)).current;
-  const animScale = useRef(new Animated.Value(1)).current;
-  const animOpacity = useRef(new Animated.Value(1)).current;
-  const dragY = useRef(new Animated.Value(0)).current;
+const HIGHLIGHT_DURATION = 3000;
 
-  const desabilitadoRef = useRef(desabilitado);
-  const falidoRef = useRef(falido);
-  const cartaRef = useRef(carta);
-  const didMoveRef = useRef(false);
+function CartaAnimada({ carta, index, numCartas, desabilitado, falido, selecionada, onToggleSelecionar, onZoom, prevPositions, isRecentDrawn }) {
+  const animLeft = useSharedValue(index * OVERLAP);
+  const animTop = useSharedValue(0);
+  const animRotate = useSharedValue(0);
+  const animScale = useSharedValue(1);
+  const animOpacity = useSharedValue(0);
+  const animGlow = useSharedValue(0);
+  const animHighlight = useSharedValue(0);
 
-  desabilitadoRef.current = desabilitado;
-  falidoRef.current = falido;
-  cartaRef.current = carta;
-
-  const maxAngle = 18;
+  const maxAngle = 22;
   const angleStep = numCartas > 1 ? (maxAngle * 2) / (numCartas - 1) : 0;
   const offsetFromCenter = index - (numCartas - 1) / 2;
   const angle = numCartas > 1 ? offsetFromCenter * angleStep : 0;
-  const translateY = Math.abs(offsetFromCenter) * 6;
 
-  const panResponder = useRef(
-    PanResponder.create({
-      // Captura TODOS os toques desde o inicio para nao conflitar com Pressable
-      onStartShouldSetPanResponder: () => true,
-      onStartShouldSetPanResponderCapture: () => false,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        didMoveRef.current = false;
-        Animated.spring(animScale, { toValue: 1.1, useNativeDriver: false, friction: 5 }).start();
-      },
-      onPanResponderMove: (_, gestureState) => {
-        // Marca como movimento real se passou do limiar
-        if (Math.abs(gestureState.dy) > 8 || Math.abs(gestureState.dx) > 8) {
-          didMoveRef.current = true;
-        }
-        if (gestureState.dy < 0) {
-          dragY.setValue(gestureState.dy);
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const desab = desabilitadoRef.current;
-        const faliu = falidoRef.current;
-        const podeJogar = !desab && !faliu;
+  const curvature = numCartas > 3 ? 8 : 5;
+  const normalizedOffset = numCartas > 1 ? offsetFromCenter / ((numCartas - 1) / 2) : 0;
+  const translateYBase = Math.pow(Math.abs(normalizedOffset), 1.3) * curvature;
+  const translateYAlvo = translateYBase - (selecionada ? LIFT_SELECIONADA : 0);
 
-        if (podeJogar && gestureState.dy < DRAG_THRESHOLD) {
-          // Arraste para cima suficiente = jogar carta (so permitido no seu turno)
-          soundManager.playCardPlay();
-          Animated.parallel([
-            Animated.timing(animTop, { toValue: -250, duration: 300, useNativeDriver: false }),
-            Animated.timing(animOpacity, { toValue: 0, duration: 300, useNativeDriver: false }),
-            Animated.timing(animScale, { toValue: 0.5, duration: 300, useNativeDriver: false }),
-          ]).start(() => {
-            dragY.setValue(0);
-            if (onJogar) onJogar(cartaRef.current);
-          });
-        } else if (!didMoveRef.current) {
-          // Toque simples (sem movimento) = ampliar/inspecionar a carta.
-          Animated.spring(animScale, { toValue: 1, useNativeDriver: false, friction: 8 }).start();
-          Animated.spring(dragY, { toValue: 0, useNativeDriver: false, friction: 8 }).start();
-          soundManager.playCardDraw();
-          if (onPress) onPress(cartaRef.current);
-        } else {
-          // Arraste incompleto (ou tentativa de jogar fora do turno) = voltar pro lugar
-          Animated.parallel([
-            Animated.spring(dragY, { toValue: 0, useNativeDriver: false, friction: 8 }),
-            Animated.spring(animScale, { toValue: 1, useNativeDriver: false, friction: 8 }),
-          ]).start();
-        }
-      },
-      onPanResponderTerminate: () => {
-        Animated.parallel([
-          Animated.spring(dragY, { toValue: 0, useNativeDriver: false, friction: 8 }),
-          Animated.spring(animScale, { toValue: 1, useNativeDriver: false, friction: 8 }),
-        ]).start();
-      },
-    })
-  ).current;
+  const wrapperStyle = useAnimatedStyle(() => ({
+    left: animLeft.value,
+    top: animTop.value,
+    transform: [
+      { rotate: `${interpolate(animRotate.value, [-30, 30], [-30, 30])}deg` },
+      { scale: animScale.value },
+    ],
+    opacity: animOpacity.value,
+    zIndex: selecionada ? 50 + index : index,
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: animGlow.value,
+  }));
+
+  const highlightStyle = useAnimatedStyle(() => ({
+    opacity: animHighlight.value,
+    shadowOpacity: animHighlight.value,
+  }));
 
   useEffect(() => {
     const prev = prevPositions.current[carta.uid];
     const newLeft = index * OVERLAP;
 
     if (prev !== undefined && prev !== newLeft) {
-      animLeft.setValue(prev);
+      animLeft.value = prev;
     }
 
-    Animated.parallel([
-      Animated.spring(animLeft, { toValue: newLeft, useNativeDriver: false, friction: 8, tension: 60 }),
-      Animated.spring(animTop, { toValue: translateY, useNativeDriver: false, friction: 8, tension: 60 }),
-      Animated.spring(animRotate, { toValue: angle, useNativeDriver: false, friction: 8, tension: 60 }),
-      Animated.spring(animScale, { toValue: 1, useNativeDriver: false, friction: 8, tension: 60 }),
-    ]).start();
-  }, [index, numCartas]);
+    const entradaDelay = index * STAGGER_DELAY;
+
+    setTimeout(() => {
+      animLeft.value = withSpring(newLeft, { damping: 8, stiffness: 60 });
+      animTop.value = withSpring(translateYAlvo, { damping: 7, stiffness: 50 });
+      animRotate.value = withSpring(angle + (Math.random() - 0.5) * 3, { damping: 6, stiffness: 45 });
+      animScale.value = withSpring(selecionada ? 1.1 : 1, {
+        damping: selecionada ? 4 : 6,
+        stiffness: selecionada ? 120 : 50,
+      });
+      animOpacity.value = withTiming(1, { duration: 200 });
+    }, entradaDelay);
+  }, [index, numCartas, selecionada, translateYAlvo]);
+
+  useEffect(() => {
+    if (isRecentDrawn) {
+      soundManager.playCardHighlight();
+      animHighlight.value = withSequence(
+        withTiming(1, { duration: 200 }),
+        withRepeat(
+          withSequence(
+            withTiming(0.5, { duration: 500 }),
+            withTiming(1, { duration: 500 })
+          ),
+          -1,
+          false
+        )
+      );
+
+      const timer = setTimeout(() => {
+        animHighlight.value = withTiming(0, { duration: 400 });
+      }, HIGHLIGHT_DURATION);
+
+      return () => clearTimeout(timer);
+    } else {
+      animHighlight.value = 0;
+    }
+  }, [isRecentDrawn]);
+
+  useEffect(() => {
+    if (selecionada) {
+      soundManager.playSelect();
+      animGlow.value = withSequence(
+        withTiming(1, { duration: 150 }),
+        withTiming(0.6, { duration: 100 })
+      );
+    } else {
+      animGlow.value = 0;
+    }
+  }, [selecionada]);
 
   useEffect(() => {
     return () => {
@@ -113,51 +128,56 @@ function CartaAnimada({ carta, index, numCartas, desabilitado, falido, onPress, 
     };
   }, [index]);
 
-  const rotateStr = animRotate.interpolate({
-    inputRange: [-30, 30],
-    outputRange: ['-30deg', '30deg'],
-  });
+  const podeSelecionar = !desabilitado && !falido;
+
+  const handlePress = () => {
+    if (!podeSelecionar) return;
+    soundManager.playCardDraw();
+    if (onToggleSelecionar) onToggleSelecionar(carta);
+  };
+
+  const handleLongPress = () => {
+    soundManager.playCardDraw();
+    if (onZoom) onZoom(carta);
+  };
 
   return (
-    <Animated.View
-      {...panResponder.panHandlers}
-      style={[
-        styles.cartaWrapper,
-        {
-          left: animLeft,
-          top: Animated.add(animTop, dragY),
-          opacity: animOpacity,
-          transform: [
-            { rotate: rotateStr },
-            { scale: animScale },
-          ],
-          zIndex: index,
-        },
-      ]}
-    >
-      <CartaArena
-        carta={carta}
-        onPress={() => {}}
-        selecionada={false}
-        desabilitada={desabilitado || falido}
-      />
+    <Animated.View style={[styles.cartaWrapper, wrapperStyle]}>
+      <Pressable
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+        delayLongPress={LONG_PRESS_ZOOM_MS}
+      >
+        <CartaArena
+          carta={carta}
+          onPress={() => {}}
+          selecionada={selecionada}
+          desabilitada={desabilitado || falido}
+        />
+        {selecionada && (
+          <Animated.View style={[styles.selectionGlow, glowStyle]} />
+        )}
+        {isRecentDrawn && (
+          <Animated.View style={[styles.drawnHighlight, highlightStyle]} />
+        )}
+      </Pressable>
     </Animated.View>
   );
 }
 
-export default function MaoJogador({ jogador, cartaSelecionada, onSelecionarCarta, onAnimacaoSaidaCompleta, onDescartar, desabilitado, hideStatus = false, onZoomCarta }) {
+export default function MaoJogador({
+  jogador,
+  cartasSelecionadas = [],
+  onSelecionarCarta,
+  onDescartar,
+  desabilitado,
+  hideStatus = false,
+  onZoomCarta,
+  cartaRecemCompradaUid = null,
+}) {
   const prevPositions = useRef({});
   const longPressTimer = useRef(null);
   const [panelPressed, setPanelPressed] = useState(false);
-
-  const handleJogarCarta = (carta) => {
-    if (onAnimacaoSaidaCompleta) onAnimacaoSaidaCompleta(carta);
-  };
-
-  const handlePressCarta = (carta) => {
-    soundManager.playCardDraw();
-    if (onZoomCarta) onZoomCarta(carta);
-  };
 
   const handlePanelPressIn = () => {
     setPanelPressed(true);
@@ -188,24 +208,28 @@ export default function MaoJogador({ jogador, cartaSelecionada, onSelecionarCart
 
   return (
     <View style={styles.container}>
-      {/* Brilho decorativo no topo direito da mão de cartas */}
       <Text style={styles.sparkleAccent}>✨</Text>
 
-      <View style={[styles.maoContainer, { width: totalWidth }]}>
-        <View style={[styles.mao, { width: totalWidth, height: CARD_HEIGHT + 30 }]}>
-          {jogador.mao.map((carta, index) => (
-            <CartaAnimada
-              key={carta.uid}
-              carta={carta}
-              index={index}
-              numCartas={numCartas}
-              desabilitado={desabilitado}
-              falido={jogador.falido}
-              onPress={handlePressCarta}
-              onJogar={handleJogarCarta}
-              prevPositions={prevPositions}
-            />
-          ))}
+      <View style={styles.maoContainer}>
+        <View style={[styles.mao, { width: totalWidth, height: CARD_HEIGHT + 30 + LIFT_SELECIONADA }]}>
+          {jogador.mao.map((carta, index) => {
+            const selecionada = cartasSelecionadas.some((c) => c.uid === carta.uid);
+            return (
+              <CartaAnimada
+                key={carta.uid}
+                carta={carta}
+                index={index}
+                numCartas={numCartas}
+                desabilitado={desabilitado}
+                falido={jogador.falido}
+                selecionada={selecionada}
+                onToggleSelecionar={onSelecionarCarta}
+                onZoom={onZoomCarta}
+                prevPositions={prevPositions}
+                isRecentDrawn={carta.uid === cartaRecemCompradaUid}
+              />
+            );
+          })}
         </View>
       </View>
 
@@ -224,8 +248,6 @@ export default function MaoJogador({ jogador, cartaSelecionada, onSelecionarCart
           )}
         </Pressable>
       )}
-
-
     </View>
   );
 }
@@ -235,6 +257,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'transparent',
     position: 'relative',
+    width: '100%',
   },
   sparkleAccent: {
     position: 'absolute',
@@ -242,7 +265,7 @@ const styles = StyleSheet.create({
     right: 10,
     fontSize: 18,
     color: '#FFF8E7',
-    zIndex: 10,
+    zIndex: 1,
     opacity: 0.85,
   },
   maoContainer: {
@@ -252,11 +275,43 @@ const styles = StyleSheet.create({
   },
   mao: {
     position: 'relative',
+    alignSelf: 'center',
     alignItems: 'flex-start',
   },
   cartaWrapper: {
     position: 'absolute',
     top: 0,
+  },
+  selectionGlow: {
+    position: 'absolute',
+    top: -4,
+    left: -4,
+    right: -4,
+    bottom: -4,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#FFD54F',
+    backgroundColor: 'rgba(255, 213, 79, 0.15)',
+    shadowColor: '#FFD54F',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
+    elevation: 15,
+  },
+  drawnHighlight: {
+    position: 'absolute',
+    top: -5,
+    left: -5,
+    right: -5,
+    bottom: -5,
+    borderRadius: 11,
+    borderWidth: 3,
+    borderColor: '#4FC3F7',
+    backgroundColor: 'rgba(79, 195, 247, 0.12)',
+    shadowColor: '#4FC3F7',
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 16,
+    elevation: 20,
   },
   painelContainer: {
     width: SCREEN_WIDTH * 0.8,

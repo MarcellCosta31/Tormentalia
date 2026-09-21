@@ -57,13 +57,7 @@ export default function App() {
 
   const iniciarArenaMultiplayer = (quantidade) => {
     setArenaQuantidade(quantidade);
-    if (quantidade === 2) {
-      // 2 jogadores usa a arena 1v1 normal
-      setMultiplayerConfig(null);
-      setTelaAtual('arena');
-    } else {
-      setTelaAtual('arenaMulti');
-    }
+    setTelaAtual('arenaMulti');
   };
 
   const handleCriarSala = (info) => {
@@ -143,12 +137,18 @@ export default function App() {
           salaInfo={salaInfo}
         />
       )}
-      {telaAtual === 'arena' && (
-        <ArenaCombate
-          onVoltar={voltarParaInicial}
-          multiplayerConfig={multiplayerConfig}
-        />
-      )}
+      {telaAtual === 'arena' && multiplayerConfig && (
+  <ArenaMultiplayer
+    multiplayerConfig={multiplayerConfig}
+    onVoltar={voltarParaInicial}
+  />
+)}
+{telaAtual === 'arena' && !multiplayerConfig && (
+  <ArenaCombate
+    onVoltar={voltarParaInicial}
+    multiplayerConfig={null}
+  />
+)}
       {telaAtual === 'arenaMulti' && (
         <ArenaMultiplayer
           quantidade={arenaQuantidade}

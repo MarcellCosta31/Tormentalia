@@ -6,7 +6,7 @@ try {
 } catch (e) {
   console.error('[TCPClient] Failed to load TCP module:', e.message);
 }
-import { criarMensagem, parseMensagem, MSG, PORT } from './Protocol';
+import { criarMensagem, criarParser, MSG, PORT } from './Protocol';
 
 export class GameClient {
   constructor() {
@@ -14,6 +14,10 @@ export class GameClient {
     this.onConectado = null;
     this.onMensagemRecebida = null;
     this.onDesconectado = null;
+
+    // Cada conexao tem seu proprio buffer de parsing, para lidar
+    // corretamente com mensagens TCP fragmentadas entre eventos 'data'.
+    this.parse = criarParser();
   }
 
   conectar(hostIP) {
@@ -24,6 +28,10 @@ export class GameClient {
       }
 
       let settled = false;
+
+      // Novo buffer a cada tentativa de conexao, para nao arrastar lixo
+      // de uma conexao anterior (ex.: reconexao apos queda).
+      this.parse = criarParser();
 
       this.socket = TcpSocket.createConnection(
         { port: PORT, host: hostIP },
@@ -36,7 +44,7 @@ export class GameClient {
       );
 
       this.socket.on('data', (data) => {
-        const mensagens = parseMensagem(data.toString());
+        const mensagens = this.parse(data.toString());
         mensagens.forEach((msg) => {
           if (this.onMensagemRecebida) this.onMensagemRecebida(msg);
         });

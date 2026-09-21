@@ -14,9 +14,8 @@ const discoveredRooms = new Map();
 export async function startBroadcast(hostName, ip, playerCount = 1) {
   stopBroadcast();
 
-  broadcastSocket = await createSocket({ type: 'udp4', reuseAddress: true });
+  broadcastSocket = await createSocket({ type: 'udp4', reuseAddress: true, broadcast: true });
   await broadcastSocket.bind({ port: 0, address: '0.0.0.0' });
-  await broadcastSocket.setBroadcast(true);
 
   const message = JSON.stringify({
     type: DISCOVERY_MESSAGE,
@@ -56,7 +55,9 @@ export async function startListening(callback) {
 
   listenSocket.addListener('message', (event) => {
     try {
-      const data = JSON.parse(event.data);
+      const bytes = event.data instanceof Uint8Array ? event.data : new Uint8Array(event.data);
+      const text = new TextDecoder().decode(bytes);
+      const data = JSON.parse(text);
       if (data.type === DISCOVERY_MESSAGE) {
         const roomKey = `${data.ip}:${DISCOVERY_PORT}`;
         discoveredRooms.set(roomKey, {
@@ -71,7 +72,7 @@ export async function startListening(callback) {
         }
       }
     } catch (e) {
-      // Ignore invalid messages
+      console.warn('[Discovery] Mensagem invalida ignorada:', e.message);
     }
   });
 }

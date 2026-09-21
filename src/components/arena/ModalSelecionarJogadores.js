@@ -1,13 +1,18 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Modal,
   TouchableOpacity,
-  Animated,
   Dimensions,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+} from 'react-native-reanimated';
 
 const { width: W } = Dimensions.get('window');
 
@@ -25,20 +30,28 @@ const PLAYER_COLORS = [
 const PLAYER_EMOJIS = ['👑', '🤖', '🦊', '🐉', '🎭', '🦁', '🌙', '⚡'];
 
 function BotaoQuantidade({ quantidade, onPress }) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scaleAnim.value }],
+  }));
 
   const handlePress = () => {
-    Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.92, duration: 80, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 80, useNativeDriver: true }),
-    ]).start(() => onPress(quantidade));
+    scaleAnim.value = withSequence(
+      withTiming(0.92, { duration: 80 }),
+      withTiming(1, { duration: 80 }),
+      () => {
+        'worklet';
+        onPress(quantidade);
+      },
+    );
   };
 
   // Pequenos avatares para representar os jogadores
   const avatarSize = Math.min(18, Math.floor(52 / quantidade));
 
   return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+    <Animated.View style={animatedStyle}>
       <TouchableOpacity
         style={styles.botaoQuantidade}
         onPress={handlePress}
@@ -81,20 +94,21 @@ function BotaoQuantidade({ quantidade, onPress }) {
 }
 
 export default function ModalSelecionarJogadores({ visivel, onFechar, onSelecionarQuantidade }) {
-  const slideAnim = useRef(new Animated.Value(300)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useSharedValue(300);
+  const opacityAnim = useSharedValue(0);
+
+  const containerStyle = useAnimatedStyle(() => ({
+    opacity: opacityAnim.value,
+    transform: [{ translateY: slideAnim.value }],
+  }));
 
   useEffect(() => {
     if (visivel) {
-      Animated.parallel([
-        Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-      ]).start();
+      slideAnim.value = withTiming(0, { duration: 300 });
+      opacityAnim.value = withTiming(1, { duration: 300 });
     } else {
-      Animated.parallel([
-        Animated.timing(slideAnim, { toValue: 300, duration: 200, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      ]).start();
+      slideAnim.value = withTiming(300, { duration: 200 });
+      opacityAnim.value = withTiming(0, { duration: 200 });
     }
   }, [visivel]);
 
@@ -107,10 +121,7 @@ export default function ModalSelecionarJogadores({ visivel, onFechar, onSelecion
     >
       <TouchableOpacity style={styles.overlay} onPress={onFechar} activeOpacity={1}>
         <Animated.View
-          style={[
-            styles.container,
-            { opacity: opacityAnim, transform: [{ translateY: slideAnim }] },
-          ]}
+          style={[styles.container, containerStyle]}
         >
           {/* Cantos decorativos */}
           <View style={[styles.canto, styles.cantoTL]} />

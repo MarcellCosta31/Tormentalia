@@ -10,25 +10,38 @@ import {
   Alert,
 } from 'react-native';
 import * as Network from 'expo-network';
-import { GameServer } from '../multiplayer/TCPServer';
-import { GameClient } from '../multiplayer/TCPClient';
-import { MSG } from '../multiplayer/Protocol';
-import { getAvatarById } from '../utils/avatar';
+import { startListening, stopListening, cleanExpiredRooms } from '../multiplayer/discovery';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const CYAN = '#00e5ff';
 const GOLD = '#c89b3c';
 const GOLD_LIGHT = '#d4a843';
+const GREEN = '#4CAF50';
 const PANEL_BG = '#1a1a2e';
 const PANEL_BORDER = '#3a3a5c';
 
 export default function TelaLobby({ onVoltar, onCriarSala, onEntrarSala, perfil }) {
   const [ipDigitado, setIpDigitado] = useState('');
   const [localIP, setLocalIP] = useState('');
+  const [salasDescobertas, setSalasDescobertas] = useState([]);
+  const cleanTimerRef = useRef(null);
 
   useEffect(() => {
     getLocalIP();
+    startListening((rooms) => {
+      setSalasDescobertas(rooms);
+    }).catch(() => {});
+    cleanTimerRef.current = setInterval(() => {
+      cleanExpiredRooms();
+    }, 3000);
+
+    return () => {
+      stopListening();
+      if (cleanTimerRef.current) {
+        clearInterval(cleanTimerRef.current);
+      }
+    };
   }, []);
 
   const getLocalIP = async () => {
@@ -52,6 +65,10 @@ export default function TelaLobby({ onVoltar, onCriarSala, onEntrarSala, perfil 
     onEntrarSala({ ip: ipDigitado.trim() });
   };
 
+  const handleEntrarSalaDescoberta = (sala) => {
+    onEntrarSala({ ip: sala.ip });
+  };
+
   return (
     <View style={styles.background}>
       <TouchableOpacity style={styles.btnVoltarTopo} onPress={onVoltar} activeOpacity={0.7}>
@@ -71,6 +88,41 @@ export default function TelaLobby({ onVoltar, onCriarSala, onEntrarSala, perfil 
             <Text style={styles.btnCriarTexto}>CRIAR NOVA SALA</Text>
             <Text style={styles.btnCriarIcone}>+</Text>
           </TouchableOpacity>
+
+          <View style={styles.linhaDivisoria} />
+
+          {salasDescobertas.length > 0 && (
+            <View style={styles.salasContainer}>
+              <Text style={styles.salasTitulo}>SALAS ENCONTRADAS</Text>
+              {salasDescobertas.map((sala, index) => (
+                <TouchableOpacity
+                  key={`${sala.ip}-${index}`}
+                  style={styles.salaCard}
+                  onPress={() => handleEntrarSalaDescoberta(sala)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.salaInfo}>
+                    <Text style={styles.salaNome}>{sala.hostName}</Text>
+                    <Text style={styles.salaIp}>{sala.ip}</Text>
+                  </View>
+                  <View style={styles.salaJogadores}>
+                    <Text style={styles.salaJogadoresTexto}>
+                      {sala.playerCount}/{sala.maxPlayers}
+                    </Text>
+                  </View>
+                  <View style={styles.btnEntrarSmall}>
+                    <Text style={styles.btnEntrarSmallTexto}>CONECTAR</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {salasDescobertas.length === 0 && (
+            <View style={styles.procurandoContainer}>
+              <Text style={styles.procurandoTexto}>Procurando salas na rede...</Text>
+            </View>
+          )}
 
           <View style={styles.linhaDivisoria} />
 
@@ -199,7 +251,79 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 2,
     backgroundColor: '#333',
-    marginBottom: 16,
+    marginVertical: 16,
+  },
+  salasContainer: {
+    width: '100%',
+    marginBottom: 8,
+  },
+  salasTitulo: {
+    color: GOLD,
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  salaCard: {
+    width: '100%',
+    backgroundColor: 'rgba(20, 20, 40, 0.8)',
+    borderWidth: 1,
+    borderColor: GREEN,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  salaInfo: {
+    flex: 1,
+  },
+  salaNome: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  salaIp: {
+    color: '#888',
+    fontSize: 10,
+    marginTop: 2,
+  },
+  salaJogadores: {
+    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  salaJogadoresTexto: {
+    color: GREEN,
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  btnEntrarSmall: {
+    backgroundColor: '#1a3a2a',
+    borderWidth: 1,
+    borderColor: GREEN,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  btnEntrarSmallTexto: {
+    color: GREEN,
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  procurandoContainer: {
+    width: '100%',
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  procurandoTexto: {
+    color: '#666',
+    fontSize: 11,
+    fontStyle: 'italic',
   },
   inputRow: {
     width: '100%',

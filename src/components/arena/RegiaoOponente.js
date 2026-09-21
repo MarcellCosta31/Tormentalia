@@ -52,31 +52,31 @@ const styles = StyleSheet.create({
   infoBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   avatarContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: '#444',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 5,
   },
   avatarEmoji: {
-    fontSize: 14,
+    fontSize: 11,
   },
   infoText: {
     flex: 1,
   },
   nome: {
-    fontSize: 11,
+    fontSize: 8,
     color: '#CCC',
     fontWeight: 'bold',
   },
   saldo: {
-    fontSize: 13,
+    fontSize: 9,
     fontWeight: 'bold',
   },
   saldoPositivo: {
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   badgeProtegidoTexto: {
-    fontSize: 11,
+    fontSize: 8,
   },
   maoContainer: {
     paddingHorizontal: 8,

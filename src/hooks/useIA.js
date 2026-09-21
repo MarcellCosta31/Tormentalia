@@ -3,6 +3,9 @@ import { useEffect, useRef } from 'react';
 export function useIA(estado, dispatch) {
   const timeoutsRef = useRef([]);
   const executandoRef = useRef(false);
+  const estadoRef = useRef(estado);
+
+  useEffect(() => { estadoRef.current = estado; }, [estado]);
 
   useEffect(() => {
     return () => {
@@ -27,32 +30,57 @@ export function useIA(estado, dispatch) {
     timeoutsRef.current.forEach((t) => clearTimeout(t));
     timeoutsRef.current = [];
 
-    const t1 = setTimeout(() => {
-      dispatch({ type: 'IA_JOGAR_CARTA' });
+    const MAX_CARTAS_IA = 2;
+    let cartasJogadas = 0;
 
-      const t2 = setTimeout(() => {
+    function jogarProximaCarta() {
+      const estadoAtual = estadoRef.current;
+      const idxIA = estadoAtual.jogadorAtivoIndex;
+      const ia = estadoAtual.jogadores[idxIA];
+
+      if (ia && !ia.falido && ia.mao.length > 0 && cartasJogadas < MAX_CARTAS_IA) {
+        cartasJogadas++;
+        dispatch({ type: 'IA_JOGAR_CARTA' });
+
+        const tProx = setTimeout(() => {
+          jogarProximaCarta();
+        }, 800);
+        timeoutsRef.current.push(tProx);
+      } else {
+        comprarEDescartar();
+      }
+    }
+
+    function comprarEDescartar() {
+      const tComprar = setTimeout(() => {
         dispatch({ type: 'IA_COMPRAR_CARTA' });
 
-        const t3 = setTimeout(() => {
-          const ia = estado.jogadores[1];
+        const tDescarte = setTimeout(() => {
+          const estadoAtual = estadoRef.current;
+          const idxIA = estadoAtual.jogadorAtivoIndex;
+          const ia = estadoAtual.jogadores[idxIA];
           if (ia && !ia.falido && ia.mao.length > 0) {
             const idxDescarte = Math.floor(Math.random() * ia.mao.length);
             const cartaDescarte = ia.mao[idxDescarte];
             dispatch({ type: 'IA_DESCARTAR_CARTA', payload: { cartaUid: cartaDescarte.uid } });
           }
 
-          const t4 = setTimeout(() => {
+          const tFim = setTimeout(() => {
             dispatch({ type: 'IA_FIM_TURNO' });
             executandoRef.current = false;
           }, 500);
 
-          timeoutsRef.current.push(t4);
+          timeoutsRef.current.push(tFim);
         }, 500);
 
-        timeoutsRef.current.push(t3);
-      }, 800);
+        timeoutsRef.current.push(tDescarte);
+      }, 600);
 
-      timeoutsRef.current.push(t2);
+      timeoutsRef.current.push(tComprar);
+    }
+
+    const t1 = setTimeout(() => {
+      jogarProximaCarta();
     }, 600);
 
     timeoutsRef.current.push(t1);

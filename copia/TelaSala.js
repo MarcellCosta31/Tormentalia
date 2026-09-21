@@ -13,6 +13,7 @@ import { GameServer } from '../multiplayer/TCPServer';
 import { GameClient } from '../multiplayer/TCPClient';
 import { MSG } from '../multiplayer/Protocol';
 import { getAvatarById } from '../utils/avatar';
+import { startBroadcast, stopBroadcast } from '../multiplayer/discovery';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -31,6 +32,7 @@ export default function TelaSala({ onVoltar, onIniciarJogo, perfil, salaInfo }) 
 
   const serverRef = useRef(null);
   const clientRef = useRef(null);
+  const jogoIniciandoRef = useRef(false);
   const isHost = salaInfo?.isHost;
   const localIP = salaInfo?.localIP || '0.0.0.0';
   const ipDigitado = salaInfo?.ip || '';
@@ -42,8 +44,11 @@ export default function TelaSala({ onVoltar, onIniciarJogo, perfil, salaInfo }) 
       entrarSala();
     }
     return () => {
-      if (serverRef.current) serverRef.current.parar();
-      if (clientRef.current) clientRef.current.parar();
+      if (!jogoIniciandoRef.current) {
+        stopBroadcast();
+        if (serverRef.current) serverRef.current.parar();
+        if (clientRef.current) clientRef.current.parar();
+      }
     };
   }, []);
 
@@ -78,6 +83,7 @@ export default function TelaSala({ onVoltar, onIniciarJogo, perfil, salaInfo }) 
     server.onClienteConectado = () => {
       setConectado(true);
       setStatus('Jogador conectado!');
+      stopBroadcast();
       server.enviar(MSG.ROOM_JOINED, {
         hostName: perfil?.nickName || 'JOGADOR_1',
         hostAvatar: avatarId,
@@ -112,6 +118,7 @@ export default function TelaSala({ onVoltar, onIniciarJogo, perfil, salaInfo }) 
 
     try {
       await server.iniciar(localIP);
+      await startBroadcast(perfil?.nickName || 'JOGADOR_1', localIP, 1);
       setStatus('Aguardando jogador conectar...');
     } catch (e) {
       console.error('[TelaSala] Erro ao criar sala:', e.message || e);
@@ -154,14 +161,20 @@ export default function TelaSala({ onVoltar, onIniciarJogo, perfil, salaInfo }) 
         setStatus('Pronto! Aguardando host iniciar...');
       }
       if (msg.tipo === MSG.GAME_START) {
-        onIniciarJogo({
-          modo: 'multiplayer',
-          isHost: false,
-          server: null,
-          client: clientRef.current,
-          perfil,
-        });
-      }
+  jogoIniciandoRef.current = true;
+  onIniciarJogo({
+    modo: 'multiplayer',
+    isHost: false,
+    server: null,
+    client: clientRef.current,
+    perfil,
+    oponente: {
+      nome: msg.payload.perfilHost?.nickName || 'HOST',
+      avatar: msg.payload.perfilHost?.avatar || '1',
+    },
+    primeiroJogadorIndex: msg.payload.primeiroJogadorIndex,
+  });
+}
     };
 
     client.onDesconectado = () => {
@@ -172,7 +185,7 @@ export default function TelaSala({ onVoltar, onIniciarJogo, perfil, salaInfo }) 
     };
 
     try {
-      console.log('[TelaSala] Tentando conectar em:', ipDigitado, 'porta:', 4444);
+      console.log('[TelaSala] Tentando conectar em:', ipDigitado, 'porta:', 4442);
       await client.conectar(ipDigitado);
     } catch (e) {
       console.error('[TelaSala] Erro ao conectar sala:', e.message || e);
@@ -184,10 +197,19 @@ export default function TelaSala({ onVoltar, onIniciarJogo, perfil, salaInfo }) 
   const iniciarBatalha = () => {
     const oponenteInfo = jogadores.find((j) => (isHost ? j.id === 'client' : j.id === 'host'));
 
+    // HOST decide quem começa ANTES de qualquer um entrar na batalha.
+    // 0 = host (jogador 1), 1 = cliente (jogador 2).
+    // O índice viaja no GAME_START para o cliente e no multiplayerConfig
+    // para o próprio host — assim ambos criam/aceitam o mesmo estado.
+    const primeiroJogadorIndex = isHost ? (Math.random() < 0.5 ? 0 : 1) : undefined;
+
+    stopBroadcast();
+
     if (serverRef.current) {
       serverRef.current.enviar(MSG.GAME_START, {
         perfilHost: perfil,
         modo: 'multiplayer',
+        primeiroJogadorIndex,
       });
     }
     if (clientRef.current) {
@@ -196,6 +218,7 @@ export default function TelaSala({ onVoltar, onIniciarJogo, perfil, salaInfo }) 
         modo: 'multiplayer',
       });
     }
+    jogoIniciandoRef.current = true;
     onIniciarJogo({
       modo: 'multiplayer',
       isHost,
@@ -203,10 +226,12 @@ export default function TelaSala({ onVoltar, onIniciarJogo, perfil, salaInfo }) 
       client: clientRef.current,
       perfil,
       oponente: oponenteInfo ? { nome: oponenteInfo.nome, avatar: oponenteInfo.avatar } : null,
+      primeiroJogadorIndex,
     });
   };
 
   const voltar = () => {
+    stopBroadcast();
     if (serverRef.current) serverRef.current.parar();
     if (clientRef.current) clientRef.current.parar();
     onVoltar();

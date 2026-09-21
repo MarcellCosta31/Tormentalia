@@ -23,20 +23,33 @@ export function useMultiplayer(estado, dispatch, multiplayerConfig, enviarEstado
       switch (msg.tipo) {
         case MSG.PLAYER_ACTION: {
           if (isHost) {
-            dispatchRef.current(msg.payload.action);
-            setTimeout(() => {
-              if (enviarEstadoRef?.current) {
-                enviarEstadoRef.current(estadoRef.current);
-              }
-            }, 200);
+            const estadoAtual = estadoRef.current;
+            const action = msg.payload.action;
+
+            // Validacao: cliente so pode agir se for a vez dele (indice 1)
+            const acoesDeTurno = ['JOGAR_CARTA', 'PASSAR_TURNO', 'JOGAR_CARTA_E_PASSAR', 'DESCARTAR', 'JOGAR_CARTA_SEM_COMPRA'];
+            const ehAcaoDeTurno = acoesDeTurno.includes(action.type);
+
+            if (ehAcaoDeTurno && estadoAtual?.jogadorAtivoIndex !== 1) {
+              console.warn('[MP] Cliente tentou agir fora da vez. Ignorando.', action.type);
+              break;
+            }
+
+            dispatchRef.current(action);
+            // NAO enviar estado aqui. O useEffect que observa `estado` no
+            // ArenaCombate vai enviar quando o reducer realmente aplicar.
           }
           break;
         }
         case MSG.STATE_UPDATE: {
           if (!isHost) {
+            const estadoRecebido = msg.payload.estado;
+            // NAO preserva mais "mão local": o host manda a mão REAL do
+            // cliente (índice 1). O estado anterior do cliente (1v1 vs IA)
+            // é descartado por completo.
             dispatchRef.current({
               type: 'SET_MULTIPLAYER_STATE',
-              payload: msg.payload.estado,
+              payload: estadoRecebido,
             });
           }
           break;
@@ -45,6 +58,13 @@ export function useMultiplayer(estado, dispatch, multiplayerConfig, enviarEstado
           if (!isHost) {
             dispatchRef.current(msg.payload.action);
           }
+          break;
+        }
+        case MSG.GAME_OVER: {
+          dispatchRef.current({
+            type: 'SET_FIM_DE_JOGO',
+            payload: msg.payload.fimDeJogo,
+          });
           break;
         }
         default:
@@ -81,12 +101,19 @@ export function useMultiplayer(estado, dispatch, multiplayerConfig, enviarEstado
     [connection, isHost]
   );
 
+  // Host → cliente. Oculta SÓ a mão do host (índice 0). A mão do cliente
+  // (índice 1) vai completa, senão o cliente nunca vê as próprias cartas.
   const enviarEstado = useCallback(
     (estadoParaEnviar) => {
       if (connection && isHost) {
         const jogadores = estadoParaEnviar.jogadores.map((j, idx) => {
-          if (idx === 1) return { ...j };
-          return { ...j, mao: j.mao.map(() => ({ uid: -1, oculta: true })) };
+          if (idx === 0) {
+            return {
+              ...j,
+              mao: j.mao.map((c) => ({ uid: c.uid, oculta: true })),
+            };
+          }
+          return j; // cliente recebe a mão inteira
         });
         connection.enviar(MSG.STATE_UPDATE, {
           estado: { ...estadoParaEnviar, jogadores },
@@ -96,10 +123,20 @@ export function useMultiplayer(estado, dispatch, multiplayerConfig, enviarEstado
     [connection, isHost]
   );
 
+  const enviarGameOver = useCallback(
+    (fimDeJogo) => {
+      if (connection) {
+        connection.enviar(MSG.GAME_OVER, { fimDeJogo });
+      }
+    },
+    [connection]
+  );
+
   return {
     enviarAcaoHost,
     enviarAcaoCliente,
     enviarEstado,
+    enviarGameOver,
     isHost,
     isMultiplayer: !!multiplayerConfig,
   };

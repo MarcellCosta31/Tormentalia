@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, Animated, Dimensions, Pressable, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Image, Dimensions, Pressable, Modal, TouchableOpacity, Alert } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring, withDelay } from 'react-native-reanimated';
 import { GameProvider, useGameState } from '../context/GameContext';
 import { useIA } from '../hooks/useIA';
 import { useMultiplayer } from '../multiplayer/useMultiplayer';
@@ -10,18 +11,27 @@ import DecksArea from '../components/arena/DecksArea';
 import PainelStatus from '../components/arena/PainelStatus';
 import CartaZoomModal from '../components/arena/CartaZoomModal';
 import AnimacaoInicioBatalha from '../components/arena/AnimacaoInicioBatalha';
+import ParticleBurst from '../components/arena/Particles';
+import ScorePopup from '../components/arena/ScorePopup';
+import { screenShake } from '../utils/screenShake';
 import { soundManager } from '../utils/sound';
 
-const bgImg = require('../assets/sprites/batalha/background.png');
+const bgImg = require('../assets/sprites/batalha/background.jpg');
 const traseiraImg = require('../assets/cards/traseira_cartas.jpg');
 const nossoImg = require('../assets/cards/nosso.png');
 const toyotinhoImg = require('../assets/cards/toyotinho.png');
 const pauseImg = require('../assets/sprites/menu/pause.jpg');
 
 const cardImages = {
-  0: nossoImg,
-  1: toyotinhoImg,
+  ATAQUE:   nossoImg,
+  DEFESA:   toyotinhoImg,
+  PROTECAO: nossoImg,
+  CORINGA:  nossoImg,
+  ACAO:     toyotinhoImg,
+  EFEITO:   nossoImg,
 };
+
+const imgPorCarta = (c) => (c && cardImages[c.tipo]) || traseiraImg;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -35,48 +45,146 @@ const DECKS_Y = SCREEN_HEIGHT * 0.44 + DECK_H / 2;
 const DECK_DRAW_X = SCREEN_WIDTH / 2 - DECK_W - DECK_GAP / 2;
 const DECK_DESC_X = SCREEN_WIDTH / 2 + DECK_GAP / 2;
 
-const POS_MAO_JOGADOR = { x: SCREEN_WIDTH - 140, y: SCREEN_HEIGHT - 110 };
+const POS_MAO_JOGADOR = { x: SCREEN_WIDTH / 2 - 30, y: SCREEN_HEIGHT - 120 };
 const POS_MAO_OPONENTE = { x: SCREEN_WIDTH / 2 - 30, y: 30 };
 
 const DECKS_POS = { drawX: DECK_DRAW_X, drawY: DECKS_Y, descX: DECK_DESC_X, descY: DECKS_Y };
 
+// Durações das animações (constantes pra ajuste fino).
+const LIFT_DURACAO = 200;
+const VOO_DURACAO  = 400;
+const FADE_DURACAO = 120;
+const STAGGER_CARTAS = 220;
+
+// Voo simples: compra (baralho → mão) e descarte do oponente.
 function CartaVoadora({ imgSource, deX, deY, paraX, paraY, onCompleto, duracao = 400 }) {
-  const posX = useRef(new Animated.Value(deX)).current;
-  const posY = useRef(new Animated.Value(deY)).current;
-  const escala = useRef(new Animated.Value(1)).current;
-  const opacidade = useRef(new Animated.Value(1)).current;
+  const posX = useSharedValue(deX);
+  const posY = useSharedValue(deY);
+  const escala = useSharedValue(1);
+  const opacidade = useSharedValue(1);
+  const rotacao = useSharedValue(0);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    left: posX.value,
+    top: posY.value,
+    opacity: opacidade.value,
+    transform: [
+      { scale: escala.value },
+      { rotate: `${rotacao.value}deg` },
+    ],
+  }));
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(posX, { toValue: paraX, duration: duracao, useNativeDriver: false }),
-        Animated.timing(posY, { toValue: paraY, duration: duracao, useNativeDriver: false }),
-        Animated.timing(escala, { toValue: 0.6, duration: duracao, useNativeDriver: false }),
-      ]),
-      Animated.timing(opacidade, { toValue: 0, duration: 150, useNativeDriver: false }),
-    ]).start(() => {
+    const rotacaoAleatoria = (Math.random() - 0.5) * 8;
+
+    posX.value = withSequence(
+      withTiming(paraX, { duration: duracao }),
+    );
+    posY.value = withSequence(
+      withTiming(Math.min(deY, paraY) - 30, { duration: duracao * 0.5 }),
+      withSpring(paraY, { damping: 6, stiffness: 40 }),
+    );
+    escala.value = withTiming(0.6, { duration: duracao });
+    rotacao.value = withSpring(rotacaoAleatoria, { damping: 5, stiffness: 50 });
+    opacidade.value = withSequence(
+      withDelay(duracao, withTiming(0, { duration: 150 })),
+    );
+
+    const timer = setTimeout(() => {
       if (onCompleto) onCompleto();
-    });
+    }, duracao + 200);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
-    <Animated.View style={[styles.cartaVoadora, { left: posX, top: posY, opacity: opacidade, transform: [{ scale: escala }] }]}>
+    <Animated.View style={[styles.cartaVoadora, animatedStyle]}>
+      <Image source={imgSource} style={styles.cartaVoadoraImg} resizeMode="cover" />
+    </Animated.View>
+  );
+}
+
+// Carta que "salta" da mão antes de voar pro descarte.
+// Fases: lift → voo → fade. Respeita `delay` para escalonar múltiplas cartas.
+function CartaSaidaComLift({ imgSource, deX, deY, paraX, paraY, duracao = VOO_DURACAO, delay = 0, onCompleto }) {
+  const posX     = useSharedValue(deX);
+  const posY     = useSharedValue(deY);
+  const escala   = useSharedValue(1);
+  const rotacao  = useSharedValue(0);
+  const opacidade = useSharedValue(1);
+
+  const cbCompleto = onCompleto;
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    left: posX.value,
+    top: posY.value,
+    opacity: opacidade.value,
+    transform: [
+      { scale: escala.value },
+      { rotate: `${rotacao.value}deg` },
+    ],
+  }));
+
+  useEffect(() => {
+    const rotacaoAleatoria = (Math.random() - 0.5) * 10;
+
+    const executarAnimacao = () => {
+      soundManager.playCardPlay();
+
+      // FASE 1 — desprende da mão com bounce spring
+      posY.value = withSpring(deY - 55, { damping: 5, stiffness: 80 });
+      escala.value = withSpring(1.22, { damping: 4, stiffness: 100 });
+      rotacao.value = withSpring(rotacaoAleatoria, { damping: 5, stiffness: 60 });
+
+      // FASE 2 — voa pro descarte com curva parabólica (após lift)
+      const liftDuracao = 200;
+      setTimeout(() => {
+        posX.value = withTiming(paraX, { duration: duracao });
+        posY.value = withSequence(
+          withTiming(Math.min(deY, paraY) - 40, { duration: duracao * 0.5 }),
+          withSpring(paraY, { damping: 6, stiffness: 40 }),
+        );
+        escala.value = withSpring(0.7, { damping: 6, stiffness: 30 });
+        rotacao.value = withSpring(0, { damping: 7, stiffness: 50 });
+
+        // FASE 3 — fade out ao encostar no descarte
+        setTimeout(() => {
+          opacidade.value = withTiming(0, { duration: 120 });
+          setTimeout(() => { if (cbCompleto) cbCompleto(); }, 120);
+        }, duracao);
+      }, liftDuracao);
+    };
+
+    const timer = setTimeout(executarAnimacao, delay);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <Animated.View style={[styles.cartaVoadora, animatedStyle]}>
       <Image source={imgSource} style={styles.cartaVoadoraImg} resizeMode="cover" />
     </Animated.View>
   );
 }
 
 function ArenaInterna({ onVoltar, multiplayerConfig }) {
-  const { estado, jogarCarta, passarTurno, resetarJogo, dispatch } = useGameState();
-  const [cartaSelecionada, setCartaSelecionada] = useState(null);
-  const [voadora, setVoadora] = useState(null);
-  const [voadora2, setVoadora2] = useState(null);
+  const { estado, passarTurno, resetarJogo, dispatch } = useGameState();
+  const [cartasSelecionadas, setCartasSelecionadas] = useState([]);
+  const [cartasDescarte, setCartasDescarte] = useState([]); // array de voadoras indo pro descarte
+  const [voadora2, setVoadora2] = useState(null);           // compra (baralho → mão)
   const [panelPressed, setPanelPressed] = useState(false);
   const [cartaZoom, setCartaZoom] = useState(null);
   const [modalPausa, setModalPausa] = useState(false);
+  const [particlesData, setParticlesData] = useState({ visivel: false, x: 0, y: 0, cores: null });
+  const [scorePopups, setScorePopups] = useState([]);
+  const [cartaRecemCompradaUid, setCartaRecemCompradaUid] = useState(null);
   const longPressTimer = useRef(null);
   const iaAnimacaoProcessada = useRef(null);
   const estadoRef = useRef(estado);
+  const estadoEnviadoRef = useRef(null);
+  const shakeX = useSharedValue(0);
+  const shakeY = useSharedValue(0);
+  const prevSaldoRef = useRef({});
 
   const isMultiplayer = !!multiplayerConfig;
   const isHost = multiplayerConfig?.isHost;
@@ -87,7 +195,7 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
 
   const enviarEstadoRef = useRef(null);
 
-  const { enviarAcaoHost, enviarAcaoCliente, enviarEstado } = useMultiplayer(
+  const { enviarAcaoCliente, enviarEstado, enviarGameOver } = useMultiplayer(
     estado,
     dispatch,
     multiplayerConfig,
@@ -96,55 +204,60 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
 
   enviarEstadoRef.current = enviarEstado;
 
+  // ------------------------------------------------------------------
+  // Sincronização host → cliente.
+  // Envia sempre que o estado multiplayer mudar (não só após batalhaIniciada),
+  // pra cliente receber imediatamente a mão real e o jogadorAtivoIndex correto.
+  // ------------------------------------------------------------------
   useEffect(() => {
-    if (isMultiplayer && !estado?.isMultiplayer && !estado?.batalhaIniciada) {
-      if (isHost) {
-        dispatch({
-          type: 'INICIAR_MULTIPLAYER',
-          payload: {
-            nomeJogador1: multiplayerConfig?.perfil?.nickName || 'JOGADOR_1',
-            nomeJogador2: multiplayerConfig?.oponente?.nome || 'OPONENTE',
-          },
-        });
-      } else {
-        dispatch({
-          type: 'INICIAR_MULTIPLAYER',
-          payload: {
-            nomeJogador1: multiplayerConfig?.oponente?.nome || 'HOST',
-            nomeJogador2: multiplayerConfig?.perfil?.nickName || 'JOGADOR_2',
-          },
-        });
-      }
+    if (!isMultiplayer || !isHost) return;
+    if (!estado) return;
+    if (!estado.isMultiplayer) return; // aguarda INICIAR_MULTIPLAYER aplicar
+    if (estadoEnviadoRef.current === estado) return;
+    estadoEnviadoRef.current = estado;
+    enviarEstado(estado);
+  }, [estado, isMultiplayer, isHost, enviarEstado]);
+
+  // ------------------------------------------------------------------
+  // INICIAR_MULTIPLAYER — só o HOST cria estado. O cliente espera receber
+  // via STATE_UPDATE (com baralho idêntico e jogadorAtivoIndex já sorteado
+  // pelo host).
+  // ------------------------------------------------------------------
+  useEffect(() => {
+    if (!isMultiplayer) return;
+    if (estado?.isMultiplayer) return;
+
+    if (isHost) {
+      dispatch({
+        type: 'INICIAR_MULTIPLAYER',
+        payload: {
+          nomeJogador1: multiplayerConfig?.perfil?.nickName || 'JOGADOR_1',
+          nomeJogador2: multiplayerConfig?.oponente?.nome || 'OPONENTE',
+          primeiroJogadorIndex: multiplayerConfig?.primeiroJogadorIndex,
+        },
+      });
     }
-  }, [isMultiplayer, isHost, estado?.isMultiplayer, estado?.batalhaIniciada]);
+    // Cliente NÃO gera estado — recebe tudo do host.
+  }, [isMultiplayer, isHost, estado?.isMultiplayer, multiplayerConfig, dispatch]);
 
   const iaHook = useIA(estado, dispatch);
   const iaExecutando = !isMultiplayer ? iaHook.iaExecutando : false;
 
+  const MAX_CARTAS_POR_TURNO = 2;
+
   const handleAnimacaoInicioCompleta = useCallback(() => {
+    if (isMultiplayer && !isHost) {
+      // Cliente não comanda o início — espera o host mandar batalhaIniciada:true.
+      return;
+    }
     dispatch({ type: 'BATALHA_INICIADA' });
     soundManager.playBattleStart();
-    if (isMultiplayer && isHost) {
-      setTimeout(() => {
-        enviarEstado({ ...estadoRef.current, batalhaIniciada: true });
-      }, 50);
-    }
-  }, [dispatch, isMultiplayer, isHost, enviarEstado]);
+  }, [dispatch, isMultiplayer, isHost]);
 
   useEffect(() => {
-    setCartaSelecionada(null);
+    setCartasSelecionadas([]);
     iaAnimacaoProcessada.current = null;
   }, [estado?.jogadorAtivoIndex, estado?.turnoAtual]);
-
-  useEffect(() => {
-    if (estado?.fimDeJogo) {
-      if (estado.fimDeJogo.vencedor === meuIndice + 1) {
-        soundManager.playVictory();
-      } else if (estado.fimDeJogo.vencedor !== 0) {
-        soundManager.playDefeat();
-      }
-    }
-  }, [estado?.fimDeJogo]);
 
   const jogadorLocal = isMultiplayer && !isHost ? estado?.jogadores[1] : estado?.jogadores[0];
   const oponenteIA = isMultiplayer && !isHost ? estado?.jogadores[0] : estado?.jogadores[1];
@@ -158,28 +271,83 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
     : (oponenteIA?.nome || 'OPONENTE');
 
   useEffect(() => {
+    if (estado?.fimDeJogo) {
+      if (estado.fimDeJogo.vencedor === meuIndice + 1) {
+        soundManager.playVictory();
+      } else if (estado.fimDeJogo.vencedor !== 0) {
+        soundManager.playDefeat();
+      }
+      screenShake(shakeX, shakeY, 12);
+    }
+  }, [estado?.fimDeJogo]);
+
+  useEffect(() => {
+    if (!estado?.jogadores) return;
+    estado.jogadores.forEach((j, i) => {
+      const prevSaldo = prevSaldoRef.current[i];
+      if (prevSaldo !== undefined && j.saldo !== prevSaldo) {
+        const diff = j.saldo - prevSaldo;
+        const jIndex = i;
+        const x = jIndex === 0 ? SCREEN_WIDTH / 2 - 40 : SCREEN_WIDTH / 2 - 40;
+        const y = jIndex === 0 ? SCREEN_HEIGHT - 80 : 80;
+        setScorePopups([{ valor: diff, x, y }]);
+
+        if (diff < 0) {
+          screenShake(shakeX, shakeY, 6);
+        }
+
+        setParticlesData({
+          visivel: true,
+          x: SCREEN_WIDTH / 2,
+          y: jIndex === 0 ? SCREEN_HEIGHT * 0.55 : SCREEN_HEIGHT * 0.45,
+          cores: diff > 0 ? ['#66BB6A', '#FFD54F', '#4CAF50'] : ['#EF5350', '#FF5722', '#F44336'],
+        });
+      }
+      prevSaldoRef.current[i] = j.saldo;
+    });
+  }, [estado?.jogadores]);
+
+  const prevMaoSizeRef = useRef(null);
+  useEffect(() => {
+    if (!jogadorLocal?.mao) return;
+    const maoAtual = jogadorLocal.mao;
+    const maoSizeAnterior = prevMaoSizeRef.current;
+
+    if (maoSizeAnterior !== null && maoAtual.length > maoSizeAnterior) {
+      const ultimaCarta = maoAtual[maoAtual.length - 1];
+      setCartaRecemCompradaUid(ultimaCarta.uid);
+      setTimeout(() => setCartaRecemCompradaUid(null), 3000);
+    }
+
+    prevMaoSizeRef.current = maoAtual.length;
+  }, [jogadorLocal?.mao]);
+
+  // Animação da IA (single-player apenas).
+  useEffect(() => {
+    if (isMultiplayer) return;
     const anim = estado?.iaAnimacao;
     if (!anim) return;
     if (iaAnimacaoProcessada.current === anim) return;
     iaAnimacaoProcessada.current = anim;
 
     if (anim.tipo === 'jogar') {
-      setVoadora({
-        key: 'ia_jogar_' + Date.now(),
+      const key = `ia_jogar_${Date.now()}`;
+      const voadoraIA = {
+        key,
+        tipo: 'voadora',
         imgSource: traseiraImg,
         deX: POS_MAO_OPONENTE.x,
         deY: POS_MAO_OPONENTE.y,
         paraX: DECKS_POS.descX,
         paraY: DECKS_POS.descY,
         duracao: 500,
-        onCompleto: () => {
-          soundManager.playCardPlay();
-          setVoadora(null);
-        },
-      });
+        delay: 0,
+        onCompleto: () => setCartasDescarte((prev) => prev.filter((v) => v.key !== key)),
+      };
+      setCartasDescarte((prev) => [...prev, voadoraIA]);
     } else if (anim.tipo === 'comprar') {
       setVoadora2({
-        key: 'ia_comprar_' + Date.now(),
+        key: `ia_comprar_${Date.now()}`,
         imgSource: traseiraImg,
         deX: DECKS_POS.drawX,
         deY: DECKS_POS.drawY,
@@ -192,91 +360,142 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
         },
       });
     }
-  }, [estado?.iaAnimacao]);
+  }, [estado?.iaAnimacao, isMultiplayer]);
 
-  const handleSelecionarCarta = useCallback((carta) => {
+  const handleToggleSelectCarta = useCallback((carta) => {
     if (!isMinhaVez) return;
-    setCartaSelecionada(carta);
+    setCartasSelecionadas((prev) => {
+      const jaSelecionada = prev.some((c) => c.uid === carta.uid);
+      if (jaSelecionada) {
+        return prev.filter((c) => c.uid !== carta.uid);
+      }
+      if (prev.length >= MAX_CARTAS_POR_TURNO) return prev;
+      return [...prev, carta];
+    });
   }, [isMinhaVez]);
 
-  const handleAnimacaoSaidaCompleta = useCallback((carta) => {
-    const cartaImg = cardImages[carta.uid % 2];
+  const handleJogarMao = useCallback(() => {
+    if (!isMinhaVez || cartasSelecionadas.length === 0) return;
 
-    setVoadora({
-      key: 'descarte_' + Date.now(),
-      imgSource: cartaImg,
-      deX: POS_MAO_JOGADOR.x,
-      deY: POS_MAO_JOGADOR.y,
-      paraX: DECKS_POS.descX,
-      paraY: DECKS_POS.descY,
-      duracao: 400,
-      onCompleto: () => {
-        const action = {
-          type: 'JOGAR_CARTA',
-          payload: {
-            jogadorId: jogadorLocal.id,
-            cartaUid: carta.uid,
-            jogadorAlvoId: carta.precisaAlvo ? oponenteIA.id : null,
-          },
-        };
+    const cartasParaJogar = [...cartasSelecionadas];
+    setCartasSelecionadas([]);
 
-        if (isMultiplayer && isHost) {
-          jogarCarta(jogadorLocal.id, carta.uid, carta.precisaAlvo ? oponenteIA.id : null);
-          setTimeout(() => enviarEstado(estadoRef.current), 50);
-        } else if (isMultiplayer && !isHost) {
-          enviarAcaoCliente(action);
-        } else {
-          jogarCarta(jogadorLocal.id, carta.uid, carta.precisaAlvo ? oponenteIA.id : null);
-        }
+    // 1) Aplica jogada IMEDIATAMENTE (cartas saem da mão, entram no descarte).
+    if (isMultiplayer && !isHost) {
+      cartasParaJogar.forEach((c) => {
+        enviarAcaoCliente({
+          type: 'JOGAR_CARTA_SEM_COMPRA',
+          payload: { jogadorId: jogadorLocal.id, cartaUid: c.uid, jogadorAlvoId: null },
+        });
+      });
+    } else {
+      dispatch({
+        type: 'JOGAR_CARTAS_SEM_COMPRA',
+        payload: { jogadorId: jogadorLocal.id, cartas: cartasParaJogar },
+      });
+    }
 
-        setCartaSelecionada(null);
-
-        setTimeout(() => {
-          setVoadora2({
-            key: 'comprar_' + Date.now(),
-            imgSource: traseiraImg,
-            deX: DECKS_POS.drawX,
-            deY: DECKS_POS.drawY,
-            paraX: POS_MAO_JOGADOR.x,
-            paraY: POS_MAO_JOGADOR.y,
-            duracao: 400,
-            onCompleto: () => {
-              setVoadora2(null);
-              // Jogar uma carta sempre encerra o turno automaticamente - isso
-              // precisa acontecer nos 3 modos (local, host e cliente), nao so
-              // no local. Sem isso, jogadorAtivoIndex nunca avanca e o jogo
-              // fica "travado" no mesmo jogador para sempre no multiplayer.
-              if (isMultiplayer && isHost) {
-                passarTurno();
-                setTimeout(() => enviarEstado(estadoRef.current), 50);
-              } else if (isMultiplayer && !isHost) {
-                enviarAcaoCliente({ type: 'PASSAR_TURNO' });
-              } else {
-                passarTurno();
-              }
-            },
-          });
-        }, 200);
-      },
+    // 2) Anima cada carta saindo da mão (lift + voo + fade), com stagger.
+    const novasVoadoras = cartasParaJogar.map((carta, i) => {
+      const key = `saida_${i}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      return {
+        key,
+        tipo: 'lift',
+        imgSource: imgPorCarta(carta),
+        deX: POS_MAO_JOGADOR.x + i * 16,
+        deY: POS_MAO_JOGADOR.y - i * 6,
+        paraX: DECKS_POS.descX,
+        paraY: DECKS_POS.descY,
+        duracao: VOO_DURACAO,
+        delay: i * STAGGER_CARTAS,
+        onCompleto: () => setCartasDescarte((prev) => prev.filter((v) => v.key !== key)),
+      };
     });
-  }, [jogadorLocal, oponenteIA, jogarCarta, passarTurno, isMultiplayer, isHost, enviarAcaoCliente, enviarEstado]);
+    setCartasDescarte((prev) => [...prev, ...novasVoadoras]);
+
+    // 3) Agenda compra para depois da última carta chegar ao descarte.
+    const tempoUltimaSaida =
+      (cartasParaJogar.length - 1) * STAGGER_CARTAS + LIFT_DURACAO + VOO_DURACAO + FADE_DURACAO;
+    const atrasoCompra = tempoUltimaSaida + 100;
+
+    setTimeout(() => {
+      setVoadora2({
+        key: `comprar_${Date.now()}`,
+        imgSource: traseiraImg,
+        deX: DECKS_POS.drawX,
+        deY: DECKS_POS.drawY,
+        paraX: POS_MAO_JOGADOR.x,
+        paraY: POS_MAO_JOGADOR.y,
+        duracao: 400,
+        onCompleto: () => {
+          setVoadora2(null);
+          soundManager.playCardDraw();
+
+          // 4) SÓ AGORA passa o turno (fimDeTurno compra 1 pro jogador ativo).
+          if (isMultiplayer && !isHost) {
+            enviarAcaoCliente({ type: 'PASSAR_TURNO' });
+          } else {
+            passarTurno();
+          }
+        },
+      });
+    }, atrasoCompra);
+  }, [
+    isMinhaVez,
+    cartasSelecionadas,
+    jogadorLocal,
+    passarTurno,
+    isMultiplayer,
+    isHost,
+    enviarAcaoCliente,
+    dispatch,
+  ]);
 
   const handlePassarTurno = useCallback(() => {
     if (!isMinhaVez) return;
-    setCartaSelecionada(null);
+    setCartasSelecionadas([]);
+
     if (isMultiplayer && isHost) {
       passarTurno();
-      setTimeout(() => enviarEstado(estadoRef.current), 50);
     } else if (isMultiplayer && !isHost) {
       enviarAcaoCliente({ type: 'PASSAR_TURNO' });
     } else {
       passarTurno();
     }
-  }, [isMinhaVez, passarTurno, isMultiplayer, isHost, enviarEstado, enviarAcaoCliente]);
+  }, [isMinhaVez, passarTurno, isMultiplayer, isHost, enviarAcaoCliente]);
 
   const handleResetarJogo = useCallback(() => {
     resetarJogo();
   }, [resetarJogo]);
+
+  const handleDesistir = useCallback(() => {
+    Alert.alert(
+      'Desistir',
+      'Tem certeza que deseja sair? O oponente sera declarado vencedor.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sim, desistir',
+          style: 'destructive',
+          onPress: () => {
+            const oponenteIdx = isHost ? 1 : 0;
+            const oponenteNome = estado?.jogadores?.[oponenteIdx]?.nome || 'OPONENTE';
+
+            const fimDeJogo = {
+              vencedor: oponenteIdx + 1,
+              motivo: `${oponenteNome} venceu por desistencia`,
+            };
+
+            if (isMultiplayer) {
+              enviarGameOver(fimDeJogo);
+            }
+
+            onVoltar();
+          },
+        },
+      ]
+    );
+  }, [isMultiplayer, isHost, estado, enviarGameOver, onVoltar]);
 
   const handlePanelPressIn = () => {
     if (!isMinhaVez) return;
@@ -295,10 +514,14 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
     }
   };
 
+  const shakeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shakeX.value }, { translateY: shakeY.value }],
+  }));
+
   if (!estado) return null;
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, shakeStyle]}>
       <Image source={bgImg} style={styles.bg} resizeMode="cover" />
 
       <View style={styles.spotlight} pointerEvents="none" />
@@ -330,7 +553,7 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalBotao, styles.modalBotaoSair]}
-              onPress={onVoltar}
+              onPress={isMultiplayer ? handleDesistir : onVoltar}
               activeOpacity={0.7}
             >
               <Text style={styles.modalBotaoTexto}>SAIR</Text>
@@ -344,6 +567,8 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
           nomeJogadorAtivo={nomeJogadorAtivo}
           turnoAtual={estado.turnoAtual ?? 1}
           totalTurnos={estado.totalTurnos ?? 10}
+          fluxoDirecao={estado?.direcaoTurno || 1}
+          isHumano={isMinhaVez}
         />
       </View>
 
@@ -376,29 +601,55 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
       <View style={styles.bottomRightWrapper}>
         <MaoJogador
           jogador={jogadorLocal}
-          cartaSelecionada={cartaSelecionada}
-          onSelecionarCarta={handleSelecionarCarta}
-          onAnimacaoSaidaCompleta={handleAnimacaoSaidaCompleta}
+          cartasSelecionadas={cartasSelecionadas}
+          onSelecionarCarta={handleToggleSelectCarta}
           onDescartar={handlePassarTurno}
           desabilitado={jogadoresDesabilitado}
           hideStatus={true}
           onZoomCarta={(carta) => setCartaZoom(carta)}
+          cartaRecemCompradaUid={cartaRecemCompradaUid}
         />
       </View>
 
-      {voadora && (
-        <CartaVoadora
-          key={voadora.key}
-          imgSource={voadora.imgSource}
-          deX={voadora.deX}
-          deY={voadora.deY}
-          paraX={voadora.paraX}
-          paraY={voadora.paraY}
-          duracao={voadora.duracao}
-          onCompleto={voadora.onCompleto}
-        />
+      {isMinhaVez && cartasSelecionadas.length > 0 && (
+        <Pressable
+          style={styles.botaoJogar}
+          onPress={handleJogarMao}
+        >
+          <Text style={styles.botaoJogarTexto}>JOGAR</Text>
+          <Text style={styles.botaoJogarContador}>{cartasSelecionadas.length}/{MAX_CARTAS_POR_TURNO}</Text>
+        </Pressable>
       )}
 
+      {/* Cartas voando pro descarte (jogador humano ou IA) */}
+      {cartasDescarte.map((v) => (
+        v.tipo === 'lift' ? (
+          <CartaSaidaComLift
+            key={v.key}
+            imgSource={v.imgSource}
+            deX={v.deX}
+            deY={v.deY}
+            paraX={v.paraX}
+            paraY={v.paraY}
+            duracao={v.duracao}
+            delay={v.delay}
+            onCompleto={v.onCompleto}
+          />
+        ) : (
+          <CartaVoadora
+            key={v.key}
+            imgSource={v.imgSource}
+            deX={v.deX}
+            deY={v.deY}
+            paraX={v.paraX}
+            paraY={v.paraY}
+            duracao={v.duracao}
+            onCompleto={v.onCompleto}
+          />
+        )
+      ))}
+
+      {/* Compra (baralho → mão) */}
       {voadora2 && (
         <CartaVoadora
           key={voadora2.key}
@@ -425,6 +676,9 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
             <Text style={styles.botaoReiniciar} onPress={handleResetarJogo}>
               JOGAR NOVAMENTE
             </Text>
+            <Text style={styles.botaoVoltarMenu} onPress={onVoltar}>
+              VOLTAR AO MENU
+            </Text>
           </View>
         </View>
       )}
@@ -443,7 +697,20 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
         visivel={!!cartaZoom}
         onFechar={() => setCartaZoom(null)}
       />
-    </View>
+
+      <ParticleBurst
+        x={particlesData.x}
+        y={particlesData.y}
+        cores={particlesData.cores}
+        visivel={particlesData.visivel}
+        onCompleto={() => setParticlesData((prev) => ({ ...prev, visivel: false }))}
+      />
+
+      <ScorePopup
+        alteracoes={scorePopups}
+        onCompleto={() => setScorePopups([])}
+      />
+    </Animated.View>
   );
 }
 
@@ -522,7 +789,9 @@ const styles = StyleSheet.create({
   bottomRightWrapper: {
     position: 'absolute',
     bottom: 0,
-    right: 8,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
     zIndex: 25,
   },
   cartaVoadora: {
@@ -579,6 +848,43 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
     overflow: 'hidden',
+    marginBottom: 10,
+  },
+  botaoVoltarMenu: {
+    backgroundColor: '#C62828',
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+    overflow: 'hidden',
+  },
+  botaoJogar: {
+    position: 'absolute',
+    bottom: 20,
+    left: 12,
+    backgroundColor: '#2E7D32',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 30,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: '#66BB6A',
+  },
+  botaoJogarTexto: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+    letterSpacing: 1,
+  },
+  botaoJogarContador: {
+    color: '#C8E6C9',
+    fontSize: 11,
+    marginTop: 2,
   },
   botaoPausa: {
     position: 'absolute',

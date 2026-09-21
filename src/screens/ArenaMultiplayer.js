@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,261 +7,916 @@ import {
   Dimensions,
   TouchableOpacity,
   Modal,
-  Animated,
-  ScrollView,
+  Pressable,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  withSpring,
+  withDelay,
+  withRepeat,
+  interpolate,
+} from 'react-native-reanimated';
+import { GameProvider, useGameState } from '../context/GameContext';
+import { useIAMulti } from '../hooks/useIAMulti';
+import { useMultiplayer } from '../multiplayer/useMultiplayer';
+import TurnoIndicador from '../components/arena/TurnoIndicador';
+import CartaZoomModal from '../components/arena/CartaZoomModal';
+import AnimacaoInicioBatalha from '../components/arena/AnimacaoInicioBatalha';
+import MaoJogador from '../components/arena/MaoJogador';
+import MaoOponente from '../components/arena/MaoOponente';
+import DecksArea from '../components/arena/DecksArea';
+import ParticleBurst from '../components/arena/Particles';
+import ScorePopup from '../components/arena/ScorePopup';
+import { screenShake } from '../utils/screenShake';
+import { getAvatarById } from '../utils/avatar';
+import { soundManager } from '../utils/sound';
 
-const bgImg = require('../assets/sprites/batalha/background.png');
+const bgImg = require('../assets/sprites/batalha/background.jpg');
 const traseiraImg = require('../assets/cards/traseira_cartas.jpg');
+const nossoImg = require('../assets/cards/nosso.png');
+const toyotinhoImg = require('../assets/cards/toyotinho.png');
 const pauseImg = require('../assets/sprites/menu/pause.jpg');
+
+const cardImages = { 0: nossoImg, 1: toyotinhoImg };
+const imgPorCarta = (c) => (c && cardImages[c.uid % 2]) || traseiraImg;
 
 const { width: W, height: H } = Dimensions.get('window');
 
-// Paleta de cores por jogador
-const PLAYER_COLORS = [
-  '#FFD54F', // ouro
-  '#EF5350', // vermelho
-  '#42A5F5', // azul
-  '#66BB6A', // verde
-  '#AB47BC', // roxo
-  '#FF7043', // laranja
-  '#26C6DA', // ciano
-  '#EC407A', // rosa
-];
+const CARD_W = 60;
+const CARD_H = 84;
+const MINI_CARD_W = 28;
+const MINI_CARD_H = 40;
 
-const PLAYER_EMOJIS = ['👑', '🤖', '🦊', '🐉', '🎭', '🦁', '🌙', '⚡'];
+const MAX_CARTAS_POR_TURNO = 2;
 
-// Gera jogadores fictícios para a tela de teste
-function gerarJogadores(quantidade) {
-  const nomes = ['VOCÊ', 'ROBÔ', 'RAPOSA', 'DRAGÃO', 'MÁSCARA', 'LEÃO', 'LUA', 'RAIO'];
-  return Array.from({ length: quantidade }, (_, i) => ({
-    id: i + 1,
-    nome: nomes[i] || `JOGADOR ${i + 1}`,
-    saldo: Math.floor(Math.random() * 30) + 10,
-    cartas: Math.floor(Math.random() * 5) + 1,
-    cor: PLAYER_COLORS[i],
-    emoji: PLAYER_EMOJIS[i],
-    ativo: i === 0,
-    eliminado: false,
-  }));
-}
+const LIFT_DURACAO = 200;
+const VOO_DURACAO = 400;
+const FADE_DURACAO = 120;
+const STAGGER_CARTAS = 220;
 
-// Posições ao redor da mesa (círculo)
+const POS_OPONENTE_2P = { x: W / 2, y: H * 0.22 };
+
+const POS_MAO_1V1_OPONENTE = { x: W / 2 - 30, y: 20 };
+const POS_MAO_1V1_LOCAL = { x: W / 2 - 30, y: H - 120 };
+const DECKS_POS_1V1 = { drawX: W / 2 - 58 - 18, drawY: H * 0.44 + 40, descX: W / 2 + 18, descY: H * 0.44 + 40 };
+
+const PLAYER_COLORS = ['#FFD54F', '#EF5350', '#42A5F5', '#66BB6A', '#AB47BC', '#FF7043', '#26C6DA', '#EC407A'];
+
+const AVATARES_IA_PADRAO = ['3', '4', '5', '6', '7', '2', '1'];
+
 function calcularPosicoes(n) {
+  if (n === 2) {
+    return [
+      { x: W / 2, y: H * 0.85 },
+      { x: POS_OPONENTE_2P.x, y: POS_OPONENTE_2P.y },
+    ];
+  }
   const cx = W / 2;
-  const cy = H / 2;
-  // Raio elíptico ajustado para caber na tela
-  const rx = W * 0.36;
-  const ry = H * 0.36;
-
+  const cy = H * 0.42;
+  const rx = W * 0.38;
+  const ry = H * 0.32;
   return Array.from({ length: n }, (_, i) => {
-    // Começa de baixo (jogador local) e vai no sentido horário
-    const angulo = (Math.PI / 2) + (2 * Math.PI * i) / n;
-    const x = cx + rx * Math.cos(angulo);
-    const y = cy + ry * Math.sin(angulo);
-    return { x, y };
+    const angulo = Math.PI / 2 + (2 * Math.PI * i) / n;
+    return {
+      x: cx + rx * Math.cos(angulo),
+      y: cy + ry * Math.sin(angulo),
+    };
   });
 }
 
-function MiniCarta({ cor, rotacao = 0 }) {
+// ============================ Animações ============================
+
+function CartaVoadora({ imgSource, deX, deY, paraX, paraY, onCompleto, duracao = 400 }) {
+  const posX = useSharedValue(deX);
+  const posY = useSharedValue(deY);
+  const escala = useSharedValue(1);
+  const opacidade = useSharedValue(1);
+  const rotacao = useSharedValue(0);
+
+  const cbCompleto = onCompleto;
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: escala.value },
+      { rotate: `${interpolate(rotacao.value, [-10, 10], [-10, 10])}deg` },
+    ],
+  }));
+
+  useEffect(() => {
+    const rotacaoAleatoria = (Math.random() - 0.5) * 8;
+
+    posX.value = withTiming(paraX, { duration: duracao });
+    escala.value = withTiming(0.5, { duration: duracao });
+    rotacao.value = withSpring(rotacaoAleatoria, { damping: 8, stiffness: 50 });
+    posY.value = withSequence(
+      withTiming(Math.min(deY, paraY) - 30, { duration: duracao * 0.5 }),
+      withSpring(paraY, { damping: 8, stiffness: 40 }),
+    );
+
+    opacidade.value = withDelay(
+      duracao,
+      withTiming(0, { duration: 150 })
+    );
+    setTimeout(() => { if (cbCompleto) cbCompleto(); }, duracao + 150);
+  }, []);
+
   return (
-    <View
-      style={[
-        styles.miniCarta,
-        {
-          borderColor: cor,
-          transform: [{ rotate: `${rotacao}deg` }],
-        },
-      ]}
-    >
-      <Image source={traseiraImg} style={styles.miniCartaImg} resizeMode="cover" />
-    </View>
+    <Animated.View style={[styles.cartaVoadora, { left: posX, top: posY, opacity: opacidade }, animatedStyle]}>
+      <Image source={imgSource} style={styles.cartaVoadoraImg} resizeMode="cover" />
+    </Animated.View>
   );
 }
 
-function SlotJogador({ jogador, posicao, isLocal, turnoAtual }) {
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+function CartaSaidaComLift({ imgSource, deX, deY, paraX, paraY, duracao = VOO_DURACAO, delay = 0, onCompleto }) {
+  const posX = useSharedValue(deX);
+  const posY = useSharedValue(deY);
+  const escala = useSharedValue(1);
+  const rotacao = useSharedValue(0);
+  const opacidade = useSharedValue(1);
+
+  const cbCompleto = onCompleto;
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: escala.value },
+      { rotate: `${interpolate(rotacao.value, [-15, 15], [-15, 15])}deg` },
+    ],
+  }));
 
   useEffect(() => {
-    if (jogador.ativo) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.12, duration: 600, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        ])
-      ).start();
-    } else {
-      pulseAnim.setValue(1);
-    }
-  }, [jogador.ativo]);
+    const somTimer = setTimeout(() => soundManager.playCardPlay(), delay);
+    const rotacaoAleatoria = (Math.random() - 0.5) * 10;
 
-  const SLOT_W = isLocal ? 110 : 90;
-  const SLOT_H = isLocal ? 80 : 65;
+    posY.value = withDelay(delay, withSequence(
+      withSpring(deY - 55, { damping: 7, stiffness: 80 }),
+      withTiming(Math.min(deY, paraY) - 40, { duration: duracao * 0.5 }),
+      withSpring(paraY, { damping: 8, stiffness: 40 }),
+    ));
+    escala.value = withDelay(delay, withSequence(
+      withSpring(1.22, { damping: 6, stiffness: 100 }),
+      withSpring(0.7, { damping: 8, stiffness: 30 }),
+    ));
+    rotacao.value = withDelay(delay, withSequence(
+      withSpring(rotacaoAleatoria, { damping: 7, stiffness: 60 }),
+      withSpring(0, { damping: 10, stiffness: 50 }),
+    ));
+
+    posX.value = withDelay(delay + LIFT_DURACAO, withTiming(paraX, { duration: duracao }));
+
+    opacidade.value = withDelay(
+      delay + LIFT_DURACAO + duracao,
+      withTiming(0, { duration: FADE_DURACAO })
+    );
+    setTimeout(() => {
+      clearTimeout(somTimer);
+      if (cbCompleto) cbCompleto();
+    }, delay + LIFT_DURACAO + duracao + FADE_DURACAO);
+
+    return () => clearTimeout(somTimer);
+  }, []);
+
+  return (
+    <Animated.View
+      style={[styles.cartaVoadora, { left: posX, top: posY, opacity: opacidade }, animatedStyle]}
+    >
+      <Image source={imgSource} style={styles.cartaVoadoraImg} resizeMode="cover" />
+    </Animated.View>
+  );
+}
+
+// ============================ Slot de oponente ============================
+
+function SlotOponente({ jogador, posicao, isAtivo, index, avatarSource }) {
+  const pulseAnim = useSharedValue(1);
+
+  useEffect(() => {
+    if (isAtivo) {
+      pulseAnim.value = withRepeat(
+        withSequence(
+          withTiming(1.05, { duration: 600 }),
+          withTiming(1, { duration: 600 }),
+        ),
+        -1,
+        false,
+      );
+    } else {
+      pulseAnim.value = 1;
+    }
+  }, [isAtivo]);
+
+  const numCartas = jogador.mao?.length || 0;
+  const cor = jogador.cor || PLAYER_COLORS[index % PLAYER_COLORS.length];
 
   return (
     <Animated.View
       style={[
-        styles.slotJogador,
+        styles.slotOponente,
         {
-          left: posicao.x - SLOT_W / 2,
-          top: posicao.y - SLOT_H / 2,
-          width: SLOT_W,
-          height: SLOT_H,
-          borderColor: jogador.cor,
+          left: posicao.x - 52,
+          top: posicao.y - 58,
+          borderColor: cor,
           transform: [{ scale: pulseAnim }],
-          opacity: jogador.eliminado ? 0.4 : 1,
+          opacity: jogador.falido ? 0.4 : 1,
         },
       ]}
     >
-      {/* Badge turno ativo */}
-      {jogador.ativo && (
-        <View style={[styles.badgeAtivo, { backgroundColor: jogador.cor }]}>
+      {isAtivo && (
+        <View style={[styles.badgeAtivo, { backgroundColor: cor }]}>
           <Text style={styles.badgeAtivoTexto}>VEZ</Text>
         </View>
       )}
 
-      {/* Avatar + Nome */}
-      <View style={styles.slotTop}>
-        <View style={[styles.avatarCirculo, { borderColor: jogador.cor }]}>
-          <Text style={styles.avatarEmoji}>{jogador.emoji}</Text>
+      <View style={styles.slotTopRow}>
+        <View style={[styles.avatarCirculo, { borderColor: cor }]}>
+          {avatarSource ? (
+            <Image source={avatarSource} style={styles.avatarImg} resizeMode="contain" />
+          ) : (
+            <Text style={[styles.avatarPlaceholder, { color: cor }]}>{index + 1}</Text>
+          )}
         </View>
-        <Text style={[styles.nomeJogador, { color: jogador.cor }]} numberOfLines={1}>
-          {jogador.nome}
-        </Text>
+        {jogador.protegido && <Text style={styles.badgeProtegido}>🛡️</Text>}
       </View>
 
-      {/* Saldo */}
-      <View style={styles.slotSaldo}>
+      <Text style={[styles.nomeOponente, { color: cor }]} numberOfLines={1}>
+        {jogador.nome}
+      </Text>
+
+      <View style={styles.saldoRow}>
         <Text style={styles.saldoLabel}>R$</Text>
-        <Text style={[styles.saldoValor, { color: jogador.saldo > 10 ? '#66BB6A' : jogador.saldo > 5 ? '#FFD54F' : '#EF5350' }]}>
+        <Text style={[
+          styles.saldoValor,
+          { color: jogador.saldo > 10 ? '#66BB6A' : jogador.saldo > 5 ? '#FFD54F' : '#EF5350' },
+        ]}>
           {jogador.saldo}
         </Text>
-        <Text style={styles.saldoMoeda}>🪙</Text>
       </View>
 
-      {/* Cartas na mão (mini) */}
       <View style={styles.miniCartasRow}>
-        {Array.from({ length: Math.min(jogador.cartas, 5) }).map((_, ci) => (
-          <MiniCarta key={ci} cor={jogador.cor} rotacao={(ci - 2) * 8} />
+        {Array.from({ length: Math.min(numCartas, 6) }).map((_, ci) => (
+          <Image
+            key={ci}
+            source={traseiraImg}
+            style={[
+              styles.miniCartaTraseira,
+              {
+                transform: [{ rotate: `${(ci - Math.min(numCartas, 6) / 2) * 5}deg` }],
+                borderColor: cor,
+              },
+            ]}
+            resizeMode="cover"
+          />
         ))}
       </View>
 
-      {/* Eliminado overlay */}
-      {jogador.eliminado && (
-        <View style={styles.eliminadoOverlay}>
-          <Text style={styles.eliminadoTexto}>💀 FALIU</Text>
+      {jogador.falido && (
+        <View style={styles.falidoOverlay}>
+          <Text style={styles.falidoTexto}>💀 FALIU</Text>
         </View>
       )}
     </Animated.View>
   );
 }
 
-function MesaCentral({ jogadores }) {
-  const rotAnim = useRef(new Animated.Value(0)).current;
+// ============================ Mesa central ============================
+
+function MesaCentral({ numJogadores, baralho, pilhaDescarte }) {
+  const rotAnim = useSharedValue(0);
+
+  const rotStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${interpolate(rotAnim.value, [0, 1], [0, 360])}deg` }],
+  }));
 
   useEffect(() => {
-    Animated.loop(
-      Animated.timing(rotAnim, { toValue: 1, duration: 30000, useNativeDriver: true })
-    ).start();
+    rotAnim.value = withRepeat(withTiming(1, { duration: 30000 }), -1, false);
   }, []);
-
-  const rot = rotAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
   return (
     <View style={styles.mesaCentral}>
-      {/* Círculo externo girando */}
-      <Animated.View style={[styles.mesaCirculoExt, { transform: [{ rotate: rot }] }]} />
+      <Animated.View style={[styles.mesaCirculoExt, rotStyle]} />
       <View style={styles.mesaCirculoInt}>
         <Text style={styles.mesaEmoji}>⚔️</Text>
         <Text style={styles.mesaTitulo}>ARENA</Text>
-        <Text style={styles.mesaSubtitulo}>{jogadores.length}v{jogadores.length}</Text>
+        <Text style={styles.mesaSubtitulo}>{numJogadores}v{numJogadores}</Text>
 
-        {/* Pilha descarte */}
-        <View style={styles.pilhaDescarte}>
-          <Image source={traseiraImg} style={styles.pilhaCartaImg} resizeMode="cover" />
-          <Image source={traseiraImg} style={[styles.pilhaCartaImg, styles.pilhaCarta2]} resizeMode="cover" />
-          <Image source={traseiraImg} style={[styles.pilhaCartaImg, styles.pilhaCarta3]} resizeMode="cover" />
+        <View style={styles.deckInfo}>
+          <View style={styles.deckInfoItem}>
+            <Image source={traseiraImg} style={styles.deckMini} resizeMode="cover" />
+            <Text style={styles.deckCount}>{baralho?.length || 0}</Text>
+          </View>
+          <View style={styles.deckInfoItem}>
+            <View style={styles.descarteMini}>
+              {pilhaDescarte && pilhaDescarte.length > 0 ? (
+                <Image
+                  source={cardImages[(pilhaDescarte[pilhaDescarte.length - 1]?.uid || 0) % 2]}
+                  style={styles.deckMini}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={[styles.deckMini, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+              )}
+            </View>
+            <Text style={styles.deckCount}>{pilhaDescarte?.length || 0}</Text>
+          </View>
         </View>
       </View>
     </View>
   );
 }
 
-export default function ArenaMultiplayer({ quantidade = 4, onVoltar }) {
-  const [jogadores, setJogadores] = useState(() => gerarJogadores(quantidade));
-  const [turnoAtual, setTurnoAtual] = useState(1);
-  const [jogadorAtivoIdx, setJogadorAtivoIdx] = useState(0);
+// ============================ Tela principal ============================
+
+function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
+  const {
+    estado,
+    jogarCartaSemComprarN,
+    passarTurnoN,
+    passarTurno,
+    resetarJogo,
+    dispatch,
+  } = useGameState();
+
+  const [cartaZoom, setCartaZoom] = useState(null);
   const [modalPausa, setModalPausa] = useState(false);
+  const [cartasDescarte, setCartasDescarte] = useState([]);
+  const [voadora2, setVoadora2] = useState(null);
+  const [batalhaIniciada, setBatalhaIniciada] = useState(false);
+  const [cartasSelecionadas, setCartasSelecionadas] = useState([]);
+  const [particlesData, setParticlesData] = useState({ visivel: false, x: 0, y: 0, cores: null });
+  const [scorePopups, setScorePopups] = useState([]);
+  const [cartaRecemCompradaUid, setCartaRecemCompradaUid] = useState(null);
+
+  const iaAnimacaoProcessada = useRef(null);
+  const estadoRef = useRef(estado);
+  const estadoEnviadoRef = useRef(null);
+  const shakeX = useSharedValue(0);
+  const shakeY = useSharedValue(0);
+  const prevSaldoRef = useRef({});
+
+  const isMultiplayer = !!multiplayerConfig;
+  const isHost = multiplayerConfig?.isHost;
+  const meuIdx = isMultiplayer && !isHost ? 1 : 0;
+
+  const shakeStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: shakeX.value },
+      { translateY: shakeY.value },
+    ],
+  }));
+
+  useEffect(() => { estadoRef.current = estado; }, [estado]);
+
+  const enviarEstadoRef = useRef(null);
+  const { enviarAcaoCliente, enviarEstado, enviarGameOver } = useMultiplayer(
+    estado,
+    dispatch,
+    multiplayerConfig,
+    enviarEstadoRef
+  );
+  enviarEstadoRef.current = enviarEstado;
+
+  // ------------------ Sync host → cliente ------------------
+  useEffect(() => {
+    if (!isMultiplayer || !isHost) return;
+    if (!estado?.isMultiplayer) return;
+    if (estadoEnviadoRef.current === estado) return;
+    estadoEnviadoRef.current = estado;
+    enviarEstado(estado);
+  }, [estado, isMultiplayer, isHost, enviarEstado]);
+
+  // ------------------ Init ------------------
+  useEffect(() => {
+    if (isMultiplayer) {
+      if (estado?.isMultiplayer) return;
+      if (isHost) {
+        dispatch({
+          type: 'INICIAR_MULTIPLAYER',
+          payload: {
+            nomeJogador1: multiplayerConfig?.perfil?.nickName || 'JOGADOR_1',
+            nomeJogador2: multiplayerConfig?.oponente?.nome || 'OPONENTE',
+            primeiroJogadorIndex: multiplayerConfig?.primeiroJogadorIndex,
+            avatar1: multiplayerConfig?.perfil?.avatar || '1',
+            avatar2: multiplayerConfig?.oponente?.avatar || '2',
+          },
+        });
+      }
+      return;
+    }
+
+    if (estado && estado.jogadores?.length !== quantidade) {
+      const nomes = ['VOCE', 'ROBO', 'RAPOSA', 'DRAGAO', 'MASCARA', 'LEAO', 'LUA', 'RAIO'];
+      const nomesJogadores = Array.from({ length: quantidade }, (_, i) => nomes[i] || `JOGADOR ${i + 1}`);
+      const avatarsJogadores = nomesJogadores.map((_, i) => {
+        if (i === 0) return perfilAvatarPadrao();
+        return AVATARES_IA_PADRAO[(i - 1) % AVATARES_IA_PADRAO.length];
+      });
+      dispatch({ type: 'INICIAR_MULTI_N', payload: { nomesJogadores, avatarsJogadores } });
+    }
+  }, [isMultiplayer, isHost, estado?.isMultiplayer, estado?.jogadores?.length, quantidade, multiplayerConfig, dispatch]);
+
+  // ------------------ IA local (só simulação) ------------------
+  useIAMulti(isMultiplayer ? null : estado, dispatch);
+
+  // ------------------ Limpa seleção ao trocar turno ------------------
+  useEffect(() => {
+    setCartasSelecionadas([]);
+    iaAnimacaoProcessada.current = null;
+  }, [estado?.jogadorAtivoIndex, estado?.turnoAtual]);
+
+  // ------------------ Derivados ------------------
+  const jogadores = estado?.jogadores || [];
+  const jogadorLocal = jogadores[meuIdx];
+  const jogadorAtivo = jogadores[estado?.jogadorAtivoIndex ?? 0];
+
+  const isMinhaVez =
+    estado?.jogadorAtivoIndex === meuIdx &&
+    !estado?.fimDeJogo &&
+    batalhaIniciada;
+
+  const outrosJogadores = jogadores
+    .map((j, i) => ({ ...j, idx: i }))
+    .filter((j) => j.idx !== meuIdx);
+
+  const fluxoDirecao = estado?.direcaoTurno || 1;
+  const nomeJogadorAtivo = isMinhaVez
+    ? (jogadorLocal?.nome || 'VOCE')
+    : (jogadorAtivo?.nome || 'OPONENTE');
 
   const posicoes = calcularPosicoes(quantidade);
+  const posMaoLocal = { x: W / 2 - 30, y: H - 110 };
+  const DECKS_POS = DECKS_POS_1V1;
 
-  const passarTurno = () => {
-    const novoIdx = (jogadorAtivoIdx + 1) % quantidade;
-    setJogadorAtivoIdx(novoIdx);
-    setTurnoAtual(t => (novoIdx === 0 ? t + 1 : t));
-    setJogadores(prev =>
-      prev.map((j, i) => ({ ...j, ativo: i === novoIdx }))
-    );
+  // ------------------ Avatar de cada jogador ------------------
+  const getAvatarSourceDoJogador = (jogador, index) => {
+    const avatarId =
+      jogador?.avatar ||
+      (index === meuIdx
+        ? (multiplayerConfig?.perfil?.avatar || '7')
+        : (AVATARES_IA_PADRAO[index % AVATARES_IA_PADRAO.length] || '3'));
+    return getAvatarById(avatarId);
   };
 
-  return (
-    <View style={styles.container}>
-      <Image source={bgImg} style={styles.bg} resizeMode="cover" />
+  // ------------------ Animação da IA (só simulação) ------------------
+  useEffect(() => {
+    if (isMultiplayer) return;
+    const anim = estado?.iaAnimacao;
+    if (!anim) return;
+    if (iaAnimacaoProcessada.current === anim) return;
+    iaAnimacaoProcessada.current = anim;
 
-      {/* Overlay escuro gradiente */}
+    const idxAnimado = anim.jogadorIdx;
+    const posAlvo = posicoes[idxAnimado] || { x: W / 2, y: H / 2 };
+
+    if (anim.tipo === 'jogar') {
+      const key = `ia_jogar_${Date.now()}`;
+      setCartasDescarte((prev) => [...prev, {
+        key,
+        tipo: 'voadora',
+        imgSource: traseiraImg,
+        deX: posAlvo.x - MINI_CARD_W / 2,
+        deY: posAlvo.y - MINI_CARD_H / 2,
+        paraX: DECKS_POS.descX,
+        paraY: DECKS_POS.descY,
+        duracao: 400,
+        delay: 0,
+        onCompleto: () => setCartasDescarte((prev) => prev.filter((v) => v.key !== key)),
+      }]);
+    } else if (anim.tipo === 'comprar') {
+      setVoadora2({
+        key: `ia_comprar_${Date.now()}`,
+        imgSource: traseiraImg,
+        deX: DECKS_POS.drawX,
+        deY: DECKS_POS.drawY,
+        paraX: posAlvo.x - MINI_CARD_W / 2,
+        paraY: posAlvo.y - MINI_CARD_H / 2,
+        duracao: 350,
+        onCompleto: () => { soundManager.playCardDraw(); setVoadora2(null); },
+      });
+    }
+  }, [estado?.iaAnimacao, isMultiplayer, posicoes]);
+
+  useEffect(() => {
+    if (estado?.fimDeJogo) {
+      screenShake(shakeX, shakeY, 12);
+    }
+  }, [estado?.fimDeJogo]);
+
+  useEffect(() => {
+    if (!estado?.jogadores) return;
+    estado.jogadores.forEach((j, i) => {
+      const prevSaldo = prevSaldoRef.current[i];
+      if (prevSaldo !== undefined && j.saldo !== prevSaldo) {
+        const diff = j.saldo - prevSaldo;
+        const pos = posicoes[i] || { x: W / 2, y: H / 2 };
+        setScorePopups([{ valor: diff, x: pos.x - 40, y: pos.y - 30 }]);
+
+        if (diff < 0) {
+          screenShake(shakeX, shakeY, 6);
+        }
+
+        setParticlesData({
+          visivel: true,
+          x: pos.x,
+          y: pos.y,
+          cores: diff > 0 ? ['#66BB6A', '#FFD54F', '#4CAF50'] : ['#EF5350', '#FF5722', '#F44336'],
+        });
+      }
+      prevSaldoRef.current[i] = j.saldo;
+    });
+  }, [estado?.jogadores]);
+
+  const prevMaoSizeRef = useRef(null);
+  useEffect(() => {
+    if (!jogadorLocal?.mao) return;
+    const maoAtual = jogadorLocal.mao;
+    const maoSizeAnterior = prevMaoSizeRef.current;
+
+    if (maoSizeAnterior !== null && maoAtual.length > maoSizeAnterior) {
+      const ultimaCarta = maoAtual[maoAtual.length - 1];
+      setCartaRecemCompradaUid(ultimaCarta.uid);
+      setTimeout(() => setCartaRecemCompradaUid(null), 3000);
+    }
+
+    prevMaoSizeRef.current = maoAtual.length;
+  }, [jogadorLocal?.mao]);
+
+  // ------------------ Handlers ------------------
+
+  const handleAnimacaoInicioCompleta = useCallback(() => {
+    setBatalhaIniciada(true);
+    soundManager.playBattleStart();
+    if (!isMultiplayer || isHost) {
+      dispatch({ type: 'BATALHA_INICIADA' });
+    }
+  }, [dispatch, isMultiplayer, isHost]);
+
+  const handleToggleSelectCarta = useCallback((carta) => {
+    if (!isMinhaVez) return;
+    setCartasSelecionadas((prev) => {
+      const jaSelecionada = prev.some((c) => c.uid === carta.uid);
+      if (jaSelecionada) return prev.filter((c) => c.uid !== carta.uid);
+      if (prev.length >= MAX_CARTAS_POR_TURNO) return prev;
+      return [...prev, carta];
+    });
+  }, [isMinhaVez]);
+
+  const aplicarJogadaRemota = (carta) => {
+    if (isMultiplayer) {
+      if (isHost) {
+        dispatch({
+          type: 'JOGAR_CARTA_SEM_COMPRA',
+          payload: { jogadorId: jogadorLocal.id, cartaUid: carta.uid, jogadorAlvoId: null },
+        });
+      } else {
+        enviarAcaoCliente({
+          type: 'JOGAR_CARTA_SEM_COMPRA',
+          payload: { jogadorId: jogadorLocal.id, cartaUid: carta.uid, jogadorAlvoId: null },
+        });
+      }
+    } else {
+      let alvoIdx = null;
+      if (carta.precisaAlvo) {
+        const vivos = estadoRef.current.jogadores
+          .map((j, idx) => ({ ...j, idx }))
+          .filter((j) => !j.falido && j.idx !== 0);
+        if (vivos.length > 0) {
+          alvoIdx = vivos[Math.floor(Math.random() * vivos.length)].idx;
+        }
+      }
+      jogarCartaSemComprarN(0, carta.uid, alvoIdx);
+    }
+  };
+
+  const passarVez = () => {
+    if (isMultiplayer) {
+      if (isHost) passarTurno();
+      else enviarAcaoCliente({ type: 'PASSAR_TURNO' });
+    } else {
+      passarTurnoN();
+    }
+  };
+
+  const handleJogarMao = useCallback(() => {
+    if (!isMinhaVez || cartasSelecionadas.length === 0) return;
+
+    const cartasParaJogar = [...cartasSelecionadas];
+    setCartasSelecionadas([]);
+
+    cartasParaJogar.forEach(aplicarJogadaRemota);
+
+    const novasVoadoras = cartasParaJogar.map((carta, i) => {
+      const key = `saida_${i}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      return {
+        key,
+        tipo: 'lift',
+        imgSource: imgPorCarta(carta),
+        deX: posMaoLocal.x + i * 16,
+        deY: posMaoLocal.y - i * 6,
+        paraX: DECKS_POS.descX,
+        paraY: DECKS_POS.descY,
+        duracao: VOO_DURACAO,
+        delay: i * STAGGER_CARTAS,
+        onCompleto: () => setCartasDescarte((prev) => prev.filter((v) => v.key !== key)),
+      };
+    });
+    setCartasDescarte((prev) => [...prev, ...novasVoadoras]);
+
+    const tempoUltimaSaida =
+      (cartasParaJogar.length - 1) * STAGGER_CARTAS + LIFT_DURACAO + VOO_DURACAO + FADE_DURACAO;
+    const atrasoCompra = tempoUltimaSaida + 100;
+
+    setTimeout(() => {
+      setVoadora2({
+        key: `comprar_${Date.now()}`,
+        imgSource: traseiraImg,
+        deX: DECKS_POS.drawX,
+        deY: DECKS_POS.drawY,
+        paraX: posMaoLocal.x,
+        paraY: posMaoLocal.y,
+        duracao: 400,
+        onCompleto: () => {
+          setVoadora2(null);
+          soundManager.playCardDraw();
+          passarVez();
+        },
+      });
+    }, atrasoCompra);
+  }, [isMinhaVez, cartasSelecionadas, estado, isMultiplayer, isHost, jogadorLocal, enviarAcaoCliente, dispatch]);
+
+  const handlePassarTurno = useCallback(() => {
+    if (!isMinhaVez) return;
+    setCartasSelecionadas([]);
+    passarVez();
+  }, [isMinhaVez]);
+
+  const handleResetar = useCallback(() => {
+    setBatalhaIniciada(false);
+    setCartasSelecionadas([]);
+    setCartasDescarte([]);
+    setVoadora2(null);
+    iaAnimacaoProcessada.current = null;
+    resetarJogo();
+
+    if (isMultiplayer) {
+      onVoltar();
+      return;
+    }
+
+    const nomes = ['VOCE', 'ROBO', 'RAPOSA', 'DRAGAO', 'MASCARA', 'LEAO', 'LUA', 'RAIO'];
+    const nomesJogadores = Array.from({ length: quantidade }, (_, i) => nomes[i] || `JOGADOR ${i + 1}`);
+    const avatarsJogadores = nomesJogadores.map((_, i) => {
+      if (i === 0) return perfilAvatarPadrao();
+      return AVATARES_IA_PADRAO[(i - 1) % AVATARES_IA_PADRAO.length];
+    });
+    dispatch({ type: 'INICIAR_MULTI_N', payload: { nomesJogadores, avatarsJogadores } });
+  }, [resetarJogo, dispatch, quantidade, isMultiplayer, onVoltar]);
+
+  const handleSair = useCallback(() => {
+    if (isMultiplayer) {
+      const oponenteIdx = isHost ? 1 : 0;
+      const oponenteNome = estado?.jogadores?.[oponenteIdx]?.nome || 'OPONENTE';
+      const fimDeJogo = {
+        vencedor: oponenteIdx + 1,
+        motivo: `${oponenteNome} venceu por desistencia`,
+      };
+      enviarGameOver(fimDeJogo);
+    }
+    onVoltar();
+  }, [isMultiplayer, isHost, estado, enviarGameOver, onVoltar]);
+
+  if (isMultiplayer && !estado?.isMultiplayer) {
+    return (
+      <View style={styles.container}>
+<Image source={bgImg} style={styles.bg} resizeMode="cover" />
+        <View style={styles.overlay} />
+        <View style={styles.loadingWrap}>
+          <Text style={styles.loadingTexto}>SINCRONIZANDO...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!estado || !estado.jogadores) return null;
+
+  const avatarLocalSource = jogadorLocal ? getAvatarSourceDoJogador(jogadorLocal, meuIdx) : null;
+
+  return (
+    <Animated.View style={[styles.container, shakeStyle]}>
+      <Image source={bgImg} style={styles.bg} resizeMode="cover" />
       <View style={styles.overlay} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerTitulo}>⚔️ ARENA {quantidade}v{quantidade}</Text>
-          <Text style={styles.headerTurno}>TURNO {turnoAtual}</Text>
+      <TouchableOpacity style={styles.botaoPausa} onPress={() => setModalPausa(true)} activeOpacity={0.7}>
+        <Image source={pauseImg} style={styles.pauseIcon} resizeMode="contain" />
+      </TouchableOpacity>
+
+      <TurnoIndicador
+        nomeJogadorAtivo={nomeJogadorAtivo}
+        turnoAtual={estado.turnoAtual ?? 1}
+        totalTurnos={estado.totalTurnos ?? 10}
+        fluxoDirecao={fluxoDirecao}
+        isHumano={isMinhaVez}
+      />
+
+      {isMultiplayer ? (
+        <>
+          <View style={styles_1v1.topCenterWrapper}>
+            <MaoOponente jogador={outrosJogadores[0]} hideStatus={false} />
+          </View>
+          <View style={styles_1v1.centerDecksWrapper}>
+            <DecksArea
+              baralho={estado.baralho}
+              pilhaDescarte={estado.pilhaDescarte}
+            />
+          </View>
+        </>
+      ) : (
+        <>
+          <MesaCentral
+            numJogadores={quantidade}
+            baralho={estado.baralho}
+            pilhaDescarte={estado.pilhaDescarte}
+          />
+          {outrosJogadores.map((jogador) => (
+            <SlotOponente
+              key={jogador.id}
+              jogador={jogador}
+              posicao={posicoes[jogador.idx] || POS_OPONENTE_2P}
+              isAtivo={estado.jogadorAtivoIndex === jogador.idx}
+              index={jogador.idx}
+              avatarSource={getAvatarSourceDoJogador(jogador, jogador.idx)}
+            />
+          ))}
+        </>
+      )}
+
+      {isMultiplayer ? (
+        <View style={styles_1v1.bottomWrapper}>
+          <MaoJogador
+            jogador={jogadorLocal}
+            cartasSelecionadas={cartasSelecionadas}
+            onSelecionarCarta={handleToggleSelectCarta}
+            onDescartar={handlePassarTurno}
+            desabilitado={!isMinhaVez}
+            hideStatus={false}
+            onZoomCarta={setCartaZoom}
+            cartaRecemCompradaUid={cartaRecemCompradaUid}
+          />
         </View>
-        <TouchableOpacity style={styles.botaoPausa} onPress={() => setModalPausa(true)} activeOpacity={0.7}>
-          <Image source={pauseImg} style={styles.pauseIcon} resizeMode="contain" />
-        </TouchableOpacity>
-      </View>
+      ) : (
+        <>
+          <View style={styles.painelLocalPos}>
+            <Pressable onPress={handlePassarTurno} style={styles.painelLocal}>
+              <View style={[styles.painelLocalInner, { borderColor: jogadorLocal?.cor || '#FFD54F' }]}>
+                <View style={[styles.painelLocalAvatar, { borderColor: jogadorLocal?.cor || '#FFD54F' }]}>
+                  {avatarLocalSource ? (
+                    <Image source={avatarLocalSource} style={styles.painelLocalAvatarImg} resizeMode="contain" />
+                  ) : (
+                    <Text style={[styles.avatarPlaceholder, { color: jogadorLocal?.cor || '#FFD54F' }]}>
+                      {meuIdx + 1}
+                    </Text>
+                  )}
+                </View>
+                <Text style={[styles.painelLocalNome, { color: jogadorLocal?.cor || '#FFD54F' }]}>
+                  {jogadorLocal?.nome || 'VOCE'}
+                </Text>
+                <View style={styles.painelLocalSaldo}>
+                  <Text style={styles.painelLocalSaldoLabel}>R$</Text>
+                  <Text style={[
+                    styles.painelLocalSaldoValor,
+                    {
+                      color: (jogadorLocal?.saldo ?? 20) > 10
+                        ? '#66BB6A'
+                        : (jogadorLocal?.saldo ?? 20) > 5
+                          ? '#FFD54F'
+                          : '#EF5350',
+                    },
+                  ]}>
+                    {jogadorLocal?.saldo ?? 20}
+                  </Text>
+                </View>
+                {jogadorLocal?.protegido && <Text style={styles.painelLocalProtegido}>🛡️</Text>}
+              </View>
+            </Pressable>
+          </View>
 
-      {/* Mesa central */}
-      <MesaCentral jogadores={jogadores} />
+          <View style={styles.maoLocalWrapper}>
+            <MaoJogador
+              jogador={jogadorLocal}
+              cartasSelecionadas={cartasSelecionadas}
+              onSelecionarCarta={handleToggleSelectCarta}
+              onDescartar={handlePassarTurno}
+              desabilitado={!isMinhaVez}
+              hideStatus={true}
+              onZoomCarta={setCartaZoom}
+              cartaRecemCompradaUid={cartaRecemCompradaUid}
+            />
+          </View>
+        </>
+      )}
 
-      {/* Slots dos jogadores ao redor */}
-      {jogadores.map((jogador, i) => (
-        <SlotJogador
-          key={jogador.id}
-          jogador={jogador}
-          posicao={posicoes[i]}
-          isLocal={i === 0}
-          turnoAtual={turnoAtual}
-        />
+      {isMinhaVez && cartasSelecionadas.length > 0 && (
+        <Pressable style={styles.botaoJogar} onPress={handleJogarMao}>
+          <Text style={styles.botaoJogarTexto}>JOGAR</Text>
+          <Text style={styles.botaoJogarContador}>
+            {cartasSelecionadas.length}/{MAX_CARTAS_POR_TURNO}
+          </Text>
+        </Pressable>
+      )}
+
+      {cartasDescarte.map((v) => (
+        v.tipo === 'lift' ? (
+          <CartaSaidaComLift
+            key={v.key}
+            imgSource={v.imgSource}
+            deX={v.deX}
+            deY={v.deY}
+            paraX={v.paraX}
+            paraY={v.paraY}
+            duracao={v.duracao}
+            delay={v.delay}
+            onCompleto={v.onCompleto}
+          />
+        ) : (
+          <CartaVoadora
+            key={v.key}
+            imgSource={v.imgSource}
+            deX={v.deX}
+            deY={v.deY}
+            paraX={v.paraX}
+            paraY={v.paraY}
+            duracao={v.duracao}
+            onCompleto={v.onCompleto}
+          />
+        )
       ))}
 
-      {/* Botões de ação (apenas para jogador local quando é sua vez) */}
-      {jogadores[0].ativo && (
-        <View style={styles.acoesContainer}>
-          <TouchableOpacity style={[styles.botaoAcao, styles.botaoJogar]} activeOpacity={0.8}>
-            <Text style={styles.botaoAcaoTexto}>🃏 JOGAR</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.botaoAcao, styles.botaoPassar]} onPress={passarTurno} activeOpacity={0.8}>
-            <Text style={styles.botaoAcaoTexto}>⏭️ PASSAR</Text>
-          </TouchableOpacity>
+      {voadora2 && (
+        <CartaVoadora
+          key={voadora2.key}
+          imgSource={voadora2.imgSource}
+          deX={voadora2.deX}
+          deY={voadora2.deY}
+          paraX={voadora2.paraX}
+          paraY={voadora2.paraY}
+          duracao={voadora2.duracao}
+          onCompleto={voadora2.onCompleto}
+        />
+      )}
+
+      {estado.fimDeJogo && (
+        <View style={styles.overlayFim}>
+          <View style={styles.overlayCard}>
+            <Text style={styles.overlayTitulo}>
+              {estado.fimDeJogo.vencedor === meuIdx + 1 ? 'VOCE VENCEU!' :
+               estado.fimDeJogo.vencedor === 0 ? 'EMPATE!' :
+               `${jogadores.find(j => j.id === estado.fimDeJogo.vencedor)?.nome || 'ALGUEM'} VENCEU!`}
+            </Text>
+            <Text style={styles.overlayMotivo}>{estado.fimDeJogo.motivo}</Text>
+            <View style={styles.overlayPlacar}>
+              {jogadores.map(j => (
+                <Text key={j.id} style={[styles.overlayPlacarLinha, { color: j.falido ? '#EF5350' : (j.cor || '#FFD54F') }]}>
+                  {j.nome}: R$ {j.saldo} {j.falido ? '💀' : ''}
+                </Text>
+              ))}
+            </View>
+            {!isMultiplayer && (
+              <TouchableOpacity style={styles.botaoReiniciar} onPress={handleResetar} activeOpacity={0.7}>
+                <Text style={styles.botaoReiniciarTexto}>JOGAR NOVAMENTE</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.botaoSairFim} onPress={onVoltar} activeOpacity={0.7}>
+              <Text style={styles.botaoSairFimTexto}>SAIR</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
-      {/* Legenda: quantidade de jogadores */}
-      <View style={styles.legendaContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.legendaScroll}>
-          {jogadores.map((j) => (
-            <View key={j.id} style={[styles.legendaItem, j.ativo && { borderColor: j.cor, borderWidth: 1.5 }]}>
-              <Text style={styles.legendaEmoji}>{j.emoji}</Text>
-              <Text style={[styles.legendaNome, { color: j.cor }]}>{j.nome}</Text>
-              <Text style={styles.legendaSaldo}>R${j.saldo}</Text>
-            </View>
-          ))}
-        </ScrollView>
-      </View>
+      {!estado.batalhaIniciada && (
+        <AnimacaoInicioBatalha
+          jogadorAtivoIndex={estado.jogadorAtivoIndex}
+          nomeJogador={jogadorLocal?.nome || 'VOCE'}
+          nomeOponente={jogadores[meuIdx === 0 ? 1 : 0]?.nome || 'OPONENTE'}
+          onCompleto={handleAnimacaoInicioCompleta}
+        />
+      )}
 
-      {/* Modal Pausa */}
+      <CartaZoomModal carta={cartaZoom} visivel={!!cartaZoom} onFechar={() => setCartaZoom(null)} />
+
+      <ParticleBurst
+        x={particlesData.x}
+        y={particlesData.y}
+        cores={particlesData.cores}
+        visivel={particlesData.visivel}
+        onCompleto={() => setParticlesData((prev) => ({ ...prev, visivel: false }))}
+      />
+
+      <ScorePopup
+        alteracoes={scorePopups}
+        onCompleto={() => setScorePopups([])}
+      />
+
       <Modal visible={modalPausa} transparent animationType="fade" onRequestClose={() => setModalPausa(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -270,161 +925,83 @@ export default function ArenaMultiplayer({ quantidade = 4, onVoltar }) {
             <TouchableOpacity style={[styles.modalBotao, styles.modalContinuar]} onPress={() => setModalPausa(false)} activeOpacity={0.7}>
               <Text style={styles.modalBotaoTexto}>CONTINUAR</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.modalBotao, styles.modalSair]} onPress={onVoltar} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={[styles.modalBotao, styles.modalSair]}
+              onPress={isMultiplayer ? () => { setModalPausa(false); handleSair(); } : onVoltar}
+              activeOpacity={0.7}
+            >
               <Text style={styles.modalBotaoTexto}>SAIR</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </View>
+    </Animated.View>
+  );
+}
+
+let _perfilCacheSimulacao = null;
+export function setPerfilParaSimulacao(perfil) {
+  _perfilCacheSimulacao = perfil;
+}
+function perfilAvatarPadrao() {
+  return _perfilCacheSimulacao?.avatar || '7';
+}
+
+export default function ArenaMultiplayer({ quantidade, onVoltar, multiplayerConfig }) {
+  const qtd = multiplayerConfig ? 2 : (quantidade || 2);
+  return (
+    <GameProvider>
+      <ArenaMultiInterna quantidade={qtd} onVoltar={onVoltar} multiplayerConfig={multiplayerConfig} />
+    </GameProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A1A',
-  },
-  bg: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 8,
-    backgroundColor: 'rgba(10,10,26,0.75)',
-    borderBottomWidth: 1,
-    borderBottomColor: '#FFD54F44',
-    zIndex: 50,
-  },
-  headerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  headerTitulo: {
-    color: '#FFD54F',
-    fontSize: 16,
-    fontWeight: 'bold',
-    letterSpacing: 1.5,
-  },
-  headerTurno: {
-    color: '#AAB0D0',
-    fontSize: 13,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 20,
-  },
+  container: { flex: 1, backgroundColor: '#0A0A1A' },
+  bg: { position: 'absolute', width: '100%', height: '100%' },
+  overlay: { position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.45)' },
+
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingTexto: { color: '#FFD54F', fontSize: 16, fontWeight: 'bold', letterSpacing: 3 },
+
   botaoPausa: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderWidth: 1,
-    borderColor: '#FFD54F',
-    alignItems: 'center',
-    justifyContent: 'center',
+    position: 'absolute', top: 10, right: 10, width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.6)', borderWidth: 1, borderColor: '#FFD54F',
+    alignItems: 'center', justifyContent: 'center', zIndex: 100,
   },
-  pauseIcon: {
-    width: 20,
-    height: 20,
-  },
-  // Mesa central
+  pauseIcon: { width: 20, height: 20 },
+
   mesaCentral: {
-    position: 'absolute',
-    left: W / 2 - 70,
-    top: H / 2 - 70,
-    width: 140,
-    height: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 5,
+    position: 'absolute', left: W / 2 - 70, top: H * 0.42 - 70,
+    width: 140, height: 140, alignItems: 'center', justifyContent: 'center', zIndex: 5,
   },
   mesaCirculoExt: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    borderWidth: 2,
-    borderColor: '#FFD54F',
-    borderStyle: 'dashed',
+    position: 'absolute', width: 140, height: 140, borderRadius: 70,
+    borderWidth: 2, borderColor: '#FFD54F', borderStyle: 'dashed',
   },
   mesaCirculoInt: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(15,19,34,0.92)',
-    borderWidth: 2,
-    borderColor: '#7A5C29',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 120, height: 120, borderRadius: 60,
+    backgroundColor: 'rgba(15,19,34,0.92)', borderWidth: 2, borderColor: '#7A5C29',
+    alignItems: 'center', justifyContent: 'center',
   },
-  mesaEmoji: {
-    fontSize: 22,
-  },
-  mesaTitulo: {
-    color: '#FFD54F',
-    fontSize: 13,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-  },
-  mesaSubtitulo: {
-    color: '#AAB0D0',
-    fontSize: 10,
-    letterSpacing: 1,
-    marginTop: 2,
-  },
-  pilhaDescarte: {
-    marginTop: 6,
-    position: 'relative',
-    width: 32,
-    height: 44,
-  },
-  pilhaCartaImg: {
+  mesaEmoji: { fontSize: 20 },
+  mesaTitulo: { color: '#FFD54F', fontSize: 12, fontWeight: 'bold', letterSpacing: 2 },
+  mesaSubtitulo: { color: '#AAB0D0', fontSize: 10, letterSpacing: 1, marginTop: 2 },
+
+  deckInfo: { flexDirection: 'row', gap: 12, marginTop: 6 },
+  deckInfoItem: { alignItems: 'center', gap: 2 },
+  deckMini: { width: 22, height: 30, borderRadius: 3, borderWidth: 1, borderColor: '#FFD54F88' },
+  descarteMini: { width: 22, height: 30, borderRadius: 3 },
+  deckCount: { color: '#AAB0D0', fontSize: 8, fontWeight: 'bold' },
+
+  slotOponente: {
     position: 'absolute',
-    width: 28,
-    height: 40,
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: '#FFD54F',
-    top: 0,
-    left: 0,
-  },
-  pilhaCarta2: {
-    top: -2,
-    left: 2,
-    transform: [{ rotate: '5deg' }],
-  },
-  pilhaCarta3: {
-    top: -4,
-    left: 4,
-    transform: [{ rotate: '10deg' }],
-  },
-  // Slot jogador
-  slotJogador: {
-    position: 'absolute',
-    backgroundColor: 'rgba(10,10,26,0.88)',
+    width: 104,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    backgroundColor: 'rgba(10,10,26,0.9)',
     borderWidth: 2,
-    borderRadius: 10,
-    padding: 6,
+    borderRadius: 12,
     alignItems: 'center',
     zIndex: 20,
     shadowColor: '#000',
@@ -442,158 +1019,182 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     zIndex: 30,
   },
-  badgeAtivoTexto: {
-    color: '#000',
-    fontSize: 9,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  slotTop: {
+  badgeAtivoTexto: { color: '#000', fontSize: 9, fontWeight: 'bold', letterSpacing: 1 },
+
+  slotTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    marginBottom: 3,
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   avatarCirculo: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1.5,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
     backgroundColor: '#1C2238',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  avatarEmoji: {
-    fontSize: 13,
+  avatarImg: { width: '100%', height: '100%' },
+  avatarPlaceholder: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
-  nomeJogador: {
+
+  nomeOponente: {
     fontSize: 10,
     fontWeight: 'bold',
     letterSpacing: 0.5,
-    maxWidth: 55,
+    maxWidth: 92,
+    textAlign: 'center',
   },
-  slotSaldo: {
+
+  saldoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-    marginBottom: 4,
+    marginTop: 2,
   },
-  saldoLabel: {
-    color: '#AAB0D0',
-    fontSize: 9,
-    fontWeight: 'bold',
-  },
-  saldoValor: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  saldoMoeda: {
-    fontSize: 9,
-  },
+  saldoLabel: { color: '#AAB0D0', fontSize: 9, fontWeight: 'bold' },
+  saldoValor: { fontSize: 12, fontWeight: 'bold' },
+
   miniCartasRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'center',
+    gap: 1,
+    marginTop: 4,
+    height: 18,
   },
-  miniCarta: {
-    width: 14,
-    height: 20,
+  miniCartaTraseira: {
+    width: 11,
+    height: 16,
     borderRadius: 2,
     borderWidth: 1,
-    overflow: 'hidden',
   },
-  miniCartaImg: {
-    width: '100%',
-    height: '100%',
+  badgeProtegido: {
+    fontSize: 14,
+    marginLeft: 4,
   },
-  eliminadoOverlay: {
+  falidoOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  eliminadoTexto: {
-    color: '#EF5350',
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-  },
-  // Ações locais
-  acoesContainer: {
+  falidoTexto: { color: '#EF5350', fontSize: 10, fontWeight: 'bold', letterSpacing: 0.5 },
+
+  painelLocalPos: {
     position: 'absolute',
-    bottom: 68,
-    alignSelf: 'center',
+    bottom: 10,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 18,
+  },
+  painelLocal: { alignItems: 'center' },
+  painelLocalInner: {
     flexDirection: 'row',
-    gap: 12,
-    zIndex: 40,
-  },
-  botaoAcao: {
-    paddingHorizontal: 22,
-    paddingVertical: 11,
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(10,10,26,0.9)',
+    borderWidth: 1.5,
     borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
-    elevation: 6,
+    paddingLeft: 4,
+    paddingRight: 14,
+    paddingVertical: 4,
   },
-  botaoJogar: {
-    backgroundColor: '#2E7D32',
-    borderWidth: 1.5,
-    borderColor: '#66BB6A',
+  painelLocalAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    backgroundColor: '#1C2238',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  botaoPassar: {
-    backgroundColor: '#B45309',
-    borderWidth: 1.5,
-    borderColor: '#FFD54F',
-  },
-  botaoAcaoTexto: {
-    color: '#FFF',
-    fontSize: 13,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  // Legenda inferior
-  legendaContainer: {
+  painelLocalAvatarImg: { width: '100%', height: '100%' },
+  painelLocalNome: { fontSize: 12, fontWeight: 'bold', letterSpacing: 0.5 },
+  painelLocalSaldo: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  painelLocalSaldoLabel: { color: '#AAB0D0', fontSize: 10, fontWeight: 'bold' },
+  painelLocalSaldoValor: { fontSize: 13, fontWeight: 'bold' },
+  painelLocalProtegido: { fontSize: 14 },
+
+  maoLocalWrapper: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(10,10,26,0.9)',
-    borderTopWidth: 1,
-    borderTopColor: '#FFD54F33',
-    paddingVertical: 6,
-    zIndex: 30,
-  },
-  legendaScroll: {
-    paddingHorizontal: 10,
-    gap: 8,
-  },
-  legendaItem: {
-    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    gap: 5,
-    borderWidth: 1,
-    borderColor: 'transparent',
+    zIndex: 22,
   },
-  legendaEmoji: {
-    fontSize: 13,
+
+  botaoJogar: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: '#2E7D32',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 30,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: '#66BB6A',
   },
-  legendaNome: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
+  botaoJogarTexto: { color: '#FFF', fontWeight: 'bold', fontSize: 16, letterSpacing: 1 },
+  botaoJogarContador: { color: '#C8E6C9', fontSize: 11, marginTop: 2 },
+
+  cartaVoadora: {
+    position: 'absolute',
+    width: CARD_W,
+    height: CARD_H,
+    zIndex: 100,
   },
-  legendaSaldo: {
-    color: '#AAB0D0',
-    fontSize: 10,
+  cartaVoadoraImg: { width: '100%', height: '100%', borderRadius: 6 },
+
+  overlayFim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.88)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 50,
   },
-  // Modal pausa
+  overlayCard: {
+    backgroundColor: '#1E1E2E',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FFD54F',
+    padding: 24,
+    alignItems: 'center',
+    maxWidth: '85%',
+  },
+  overlayTitulo: { fontSize: 22, color: '#FFD54F', fontWeight: 'bold', marginBottom: 8 },
+  overlayMotivo: { fontSize: 13, color: '#CCC', textAlign: 'center', marginBottom: 12 },
+  overlayPlacar: { width: '100%', marginBottom: 16 },
+  overlayPlacarLinha: { fontSize: 13, fontWeight: 'bold', marginBottom: 4, textAlign: 'center' },
+  botaoReiniciar: {
+    backgroundColor: '#2E7D32',
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  botaoReiniciarTexto: { color: '#FFF', fontWeight: 'bold', fontSize: 14, letterSpacing: 1 },
+  botaoSairFim: {
+    backgroundColor: '#C62828',
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  botaoSairFimTexto: { color: '#FFF', fontWeight: 'bold', fontSize: 14, letterSpacing: 1 },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.85)',
@@ -609,20 +1210,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: 220,
   },
-  modalTitulo: {
-    fontSize: 24,
-    color: '#FFD54F',
-    fontWeight: 'bold',
-    letterSpacing: 3,
-    marginBottom: 8,
-  },
-  modalDivisor: {
-    width: '80%',
-    height: 1,
-    backgroundColor: '#FFD54F',
-    opacity: 0.4,
-    marginBottom: 20,
-  },
+  modalTitulo: { fontSize: 24, color: '#FFD54F', fontWeight: 'bold', letterSpacing: 3, marginBottom: 8 },
+  modalDivisor: { width: '80%', height: 1, backgroundColor: '#FFD54F', opacity: 0.4, marginBottom: 20 },
   modalBotao: {
     width: '100%',
     paddingVertical: 14,
@@ -630,16 +1219,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  modalContinuar: {
-    backgroundColor: '#2E7D32',
+  modalContinuar: { backgroundColor: '#2E7D32' },
+  modalSair: { backgroundColor: '#C62828' },
+  modalBotaoTexto: { color: '#FFF', fontWeight: 'bold', fontSize: 16, letterSpacing: 1 },
+});
+
+const styles_1v1 = StyleSheet.create({
+  topCenterWrapper: {
+    position: 'absolute',
+    top: 10,
+    width: '100%',
+    alignItems: 'center',
+    zIndex: 15,
   },
-  modalSair: {
-    backgroundColor: '#C62828',
+  centerDecksWrapper: {
+    position: 'absolute',
+    top: H * 0.44,
+    width: '100%',
+    alignItems: 'center',
+    zIndex: 10,
   },
-  modalBotaoTexto: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-    letterSpacing: 1,
+  bottomWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 25,
   },
 });

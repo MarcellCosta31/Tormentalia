@@ -6,7 +6,7 @@ try {
 } catch (e) {
   console.error('[TCPServer] Failed to load TCP module:', e.message);
 }
-import { criarMensagem, parseMensagem, MSG, PORT } from './Protocol';
+import { criarMensagem, criarParser, MSG, PORT } from './Protocol';
 
 export class GameServer {
   constructor() {
@@ -28,13 +28,19 @@ export class GameServer {
 
       console.log('[TCPServer] Starting on IP:', hostIP, 'Port:', PORT);
 
-      this.server = TcpSocket.createServer({}, (socket) => {
+      this.server = TcpSocket.createServer({ reuseAddress: true }, (socket) => {
         this.client = socket;
         console.log('[TCPServer] Client connected');
+
+        // Buffer de parsing dedicado a esta conexao de cliente. Se no
+        // futuro o servidor aceitar mais de um cliente simultaneo, cada
+        // socket tera seu proprio parser isolado (fechado neste escopo).
+        const parse = criarParser();
+
         if (this.onClienteConectado) this.onClienteConectado();
 
         socket.on('data', (data) => {
-          const mensagens = parseMensagem(data.toString());
+          const mensagens = parse(data.toString());
           mensagens.forEach((msg) => {
             if (this.onMensagemRecebida) this.onMensagemRecebida(msg);
           });

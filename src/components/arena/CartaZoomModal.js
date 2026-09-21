@@ -1,5 +1,11 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Pressable, Image, Animated } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, Pressable, Image } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+} from 'react-native-reanimated';
 
 const nossoImg = require('../../assets/cards/nosso.png');
 const toyotinhoImg = require('../../assets/cards/toyotinho.png');
@@ -14,31 +20,39 @@ const ZOOM_H = 280;
 const CANTO_SIZE = 8;
 
 export default function CartaZoomModal({ carta, visivel, onFechar }) {
-  const opacidade = useRef(new Animated.Value(0)).current;
-  const escala = useRef(new Animated.Value(0.3)).current;
-  const rotacao = useRef(new Animated.Value(0)).current;
-  const overlayOpacidade = useRef(new Animated.Value(0)).current;
+  const opacidade = useSharedValue(0);
+  const escala = useSharedValue(0.3);
+  const rotacao = useSharedValue(0);
+  const overlayOpacidade = useSharedValue(0);
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacidade.value,
+  }));
+
+  const cardStyle = useAnimatedStyle(() => ({
+    opacity: opacidade.value,
+    transform: [
+      { scale: escala.value },
+      { rotate: `${rotacao.value}deg` },
+    ],
+  }));
 
   useEffect(() => {
     if (visivel) {
-      overlayOpacidade.setValue(0);
-      opacidade.setValue(0);
-      escala.setValue(0.3);
-      rotacao.setValue(-5);
+      overlayOpacidade.value = 0;
+      opacidade.value = 0;
+      escala.value = 0.3;
+      rotacao.value = -5;
 
-      Animated.parallel([
-        Animated.spring(overlayOpacidade, { toValue: 1, useNativeDriver: false, friction: 8 }),
-        Animated.spring(opacidade, { toValue: 1, useNativeDriver: false, friction: 6, tension: 40 }),
-        Animated.spring(escala, { toValue: 1, useNativeDriver: false, friction: 6, tension: 40 }),
-        Animated.spring(rotacao, { toValue: 0, useNativeDriver: false, friction: 8, tension: 30 }),
-      ]).start();
+      overlayOpacidade.value = withSpring(1, { damping: 8 });
+      opacidade.value = withSpring(1, { damping: 6, stiffness: 40 });
+      escala.value = withSpring(1, { damping: 6, stiffness: 40 });
+      rotacao.value = withSpring(0, { damping: 8, stiffness: 30 });
     } else {
-      Animated.parallel([
-        Animated.timing(overlayOpacidade, { toValue: 0, duration: 200, useNativeDriver: false }),
-        Animated.timing(opacidade, { toValue: 0, duration: 200, useNativeDriver: false }),
-        Animated.timing(escala, { toValue: 0.5, duration: 200, useNativeDriver: false }),
-        Animated.timing(rotacao, { toValue: 3, duration: 200, useNativeDriver: false }),
-      ]).start();
+      overlayOpacidade.value = withTiming(0, { duration: 200 });
+      opacidade.value = withTiming(0, { duration: 200 });
+      escala.value = withTiming(0.5, { duration: 200 });
+      rotacao.value = withTiming(3, { duration: 200 });
     }
   }, [visivel]);
 
@@ -46,32 +60,13 @@ export default function CartaZoomModal({ carta, visivel, onFechar }) {
 
   const imgSource = cardImages[carta.uid % 2];
 
-  const rotateStr = rotacao.interpolate({
-    inputRange: [-10, 10],
-    outputRange: ['-10deg', '10deg'],
-  });
-
   return (
     <Pressable style={styles.overlay} onPress={onFechar}>
       <Animated.View
-        style={[
-          styles.overlayBg,
-          { opacity: overlayOpacidade },
-        ]}
+        style={[styles.overlayBg, overlayStyle]}
         pointerEvents="none"
       />
-      <Animated.View
-        style={[
-          styles.zoomCard,
-          {
-            opacity: opacidade,
-            transform: [
-              { scale: escala },
-              { rotate: rotateStr },
-            ],
-          },
-        ]}
-      >
+      <Animated.View style={[styles.zoomCard, cardStyle]}>
         <Image source={imgSource} style={styles.cartaImg} resizeMode="cover" />
 
         <View style={[styles.canto, styles.cantoTL]} />

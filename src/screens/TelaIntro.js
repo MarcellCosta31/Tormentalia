@@ -1,5 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, Image, StyleSheet, TouchableWithoutFeedback } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Dimensions, Image, StyleSheet, TouchableWithoutFeedback } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -29,9 +35,6 @@ const SPRITE_SIZE = SCREEN_HEIGHT * 0.3;
 const FPS_ANDANDO = 8;
 const FPS_SIMBOLO = 6;
 
-// Forca o RN a decodificar/cachear cada frame ANTES de usa-lo na troca rapida
-// de source. Sem isso, principalmente no Android, o primeiro uso de cada
-// imagem pode dar um "flash" em branco (parece piscar) enquanto decodifica.
 function prefetchFrames(frames) {
   frames.forEach((frameModule) => {
     try {
@@ -39,35 +42,31 @@ function prefetchFrames(frames) {
       if (uri) {
         Image.prefetch(uri).catch(() => {});
       }
-    } catch (e) {
-      // Se o resolve falhar (ex: ambiente sem suporte), apenas ignora -
-      // o require() local ja garante que a imagem existe no bundle.
-    }
+    } catch (e) {}
   });
 }
 
 const TelaIntro = ({ onAvancar }) => {
-  const translateX = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+  const translateX = useSharedValue(SCREEN_WIDTH);
   const [currentFrame, setCurrentFrame] = useState(andandoFrames[0]);
   const [fase, setFase] = useState('andando');
-  const frameAndandoRef = useRef(0);
-  const frameSimboloRef = useRef(0);
+  const frameAndandoRef = React.useRef(0);
+  const frameSimboloRef = React.useRef(0);
 
-  // Pre-carrega TODOS os frames (andando + simbolo) assim que o componente monta,
-  // dando tempo de sobra (a caminhada dura 4s) para tudo estar em cache antes
-  // da fase do simbolo comecar a trocar de frame rapidamente.
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
   useEffect(() => {
     prefetchFrames(andandoFrames);
     prefetchFrames(simboloFrames);
   }, []);
 
   useEffect(() => {
-    Animated.timing(translateX, {
-      toValue: 0,
-      duration: 4000,
-      useNativeDriver: true,
-    }).start(() => {
-      setFase('simbolo');
+    translateX.value = withTiming(0, { duration: 4000 }, (finished) => {
+      if (finished) {
+        runOnJS(setFase)('simbolo');
+      }
     });
   }, []);
 
@@ -104,10 +103,7 @@ const TelaIntro = ({ onAvancar }) => {
         <Animated.Image
           source={currentFrame}
           fadeDuration={0}
-          style={[
-            styles.sprite,
-            { transform: [{ translateX }] },
-          ]}
+          style={[styles.sprite, animatedStyle]}
           resizeMode="contain"
         />
       </Animated.View>

@@ -1,5 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  withDelay,
+  withSpring,
+  withRepeat,
+  interpolate,
+} from 'react-native-reanimated';
 import { soundManager } from '../../utils/sound';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -8,7 +18,6 @@ const NUM_RAIOS = 12;
 const NUM_CONFETES = 18;
 const CORES_CONFETE = ['#FFD54F', '#4CAF50', '#42A5F5', '#EF5350', '#FFFFFF'];
 
-// Gerado uma unica vez (fora do componente) pra nao mudar a cada render
 const CONFETES_CONFIG = Array.from({ length: NUM_CONFETES }).map(() => ({
   x: (Math.random() - 0.5) * SCREEN_WIDTH * 0.9,
   atraso: Math.random() * 250,
@@ -18,185 +27,186 @@ const CONFETES_CONFIG = Array.from({ length: NUM_CONFETES }).map(() => ({
   tamanho: 6 + Math.random() * 5,
 }));
 
+function ConfetePeca({ config, index, startAnim }) {
+  const progresso = useSharedValue(0);
+
+  const style = useAnimatedStyle(() => {
+    const translateY = interpolate(progresso.value, [0, 1], [-40, SCREEN_HEIGHT * 0.7]);
+    const rotate = interpolate(progresso.value, [0, 1], [0, config.rotacaoFinal]);
+    const opacity = interpolate(progresso.value, [0, 0.85, 1], [1, 1, 0]);
+
+    return {
+      position: 'absolute',
+      top: 0,
+      left: SCREEN_WIDTH / 2 + config.x,
+      width: config.tamanho,
+      height: config.tamanho * 1.6,
+      backgroundColor: config.cor,
+      borderRadius: 1,
+      opacity,
+      transform: [{ translateY }, { rotate: `${rotate}deg` }],
+    };
+  });
+
+  useEffect(() => {
+    if (startAnim) {
+      progresso.value = withDelay(
+        config.atraso,
+        withTiming(1, { duration: config.duracao })
+      );
+    }
+  }, [startAnim]);
+
+  return <Animated.View style={style} />;
+}
+
 export default function AnimacaoInicioBatalha({ jogadorAtivoIndex, nomeJogador, nomeOponente, onCompleto }) {
   const [fase, setFase] = useState('intro');
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const perguntaOpacity = useRef(new Animated.Value(0)).current;
-  const perguntaScale = useRef(new Animated.Value(0.5)).current;
-  const moedaScale = useRef(new Animated.Value(0)).current;
-  const moedaRotation = useRef(new Animated.Value(0)).current;
-  const resultadoOpacity = useRef(new Animated.Value(0)).current;
-  const resultadoScale = useRef(new Animated.Value(0.3)).current;
-  const flashOpacity = useRef(new Animated.Value(0)).current;
-  const glowPulse = useRef(new Animated.Value(0.3)).current;
-  const raiosRotation = useRef(new Animated.Value(0)).current;
-  const shakeX = useRef(new Animated.Value(0)).current;
-  const confeteAnims = useRef(CONFETES_CONFIG.map(() => new Animated.Value(0))).current;
+  const [completado, setCompletado] = useState(false);
+  const [startConfetti, setStartConfetti] = useState(false);
+
+  const overlayOpacity = useSharedValue(0);
+  const perguntaOpacity = useSharedValue(0);
+  const perguntaScale = useSharedValue(0.5);
+  const moedaScale = useSharedValue(0);
+  const moedaRotation = useSharedValue(0);
+  const resultadoOpacity = useSharedValue(0);
+  const resultadoScale = useSharedValue(0.3);
+  const flashOpacity = useSharedValue(0);
+  const glowPulse = useSharedValue(0.3);
+  const raiosRotation = useSharedValue(0);
+  const shakeX = useSharedValue(0);
 
   const isJogadorHumano = jogadorAtivoIndex === 0;
   const vencedor = isJogadorHumano ? nomeJogador : nomeOponente;
   const corTema = isJogadorHumano ? '#4CAF50' : '#FFD54F';
 
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.value,
+    transform: [{ translateX: shakeX.value }],
+  }));
+
+  const flashStyle = useAnimatedStyle(() => ({
+    opacity: flashOpacity.value,
+  }));
+
+  const raiosStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${interpolate(raiosRotation.value, [0, 1], [0, 360])}deg` }],
+  }));
+
+  const perguntaStyle = useAnimatedStyle(() => ({
+    opacity: perguntaOpacity.value,
+    transform: [{ scale: perguntaScale.value }],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(glowPulse.value, [0, 1], [0.25, 0.55]),
+    backgroundColor: fase === 'resultado' ? `${corTema}55` : 'rgba(255, 213, 79, 0.3)',
+  }));
+
+  const moedaStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: moedaScale.value },
+      { rotateY: `${interpolate(moedaRotation.value, [0, 1, 2, 3, 4, 5], [0, 360, 720, 1080, 1440, 1800])}deg` },
+    ],
+  }));
+
+  const resultadoStyle = useAnimatedStyle(() => ({
+    opacity: resultadoOpacity.value,
+    transform: [{ scale: resultadoScale.value }],
+  }));
+
   useEffect(() => {
     soundManager.init();
 
-    // Raios giram continuamente e devagar desde o inicio, dando profundidade
-    Animated.loop(
-      Animated.timing(raiosRotation, {
-        toValue: 1,
-        duration: 8000,
-        useNativeDriver: true,
-      })
-    ).start();
+    raiosRotation.value = withRepeat(
+      withTiming(1, { duration: 8000 }),
+      -1,
+      false
+    );
 
-    // Pulso de brilho continuo atras da moeda
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowPulse, { toValue: 1, duration: 900, useNativeDriver: true }),
-        Animated.timing(glowPulse, { toValue: 0.3, duration: 900, useNativeDriver: true }),
-      ])
-    ).start();
+    glowPulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 900 }),
+        withTiming(0.3, { duration: 900 })
+      ),
+      -1,
+      false
+    );
 
-    const sequenciaAnimacao = () => {
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(overlayOpacity, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(perguntaOpacity, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.spring(perguntaScale, {
-            toValue: 1,
-            friction: 6,
-            tension: 40,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.delay(600),
-        Animated.timing(perguntaOpacity, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setFase('flip');
-        executarGiroMoeda();
-      });
-    };
+    overlayOpacity.value = withTiming(1, { duration: 400 });
+    perguntaOpacity.value = withTiming(1, { duration: 500 });
+    perguntaScale.value = withSpring(1, { damping: 6, stiffness: 40 });
 
-    sequenciaAnimacao();
+    const timerFase = setTimeout(() => {
+      setFase('flip');
+    }, 1100);
+
+    return () => clearTimeout(timerFase);
   }, []);
 
-  const executarGiroMoeda = () => {
+  useEffect(() => {
+    if (fase !== 'flip') return;
+
+    perguntaOpacity.value = withTiming(0, { duration: 200 });
+
     soundManager.playFlip();
+    moedaScale.value = withSpring(1, { damping: 5, stiffness: 60 });
+    moedaRotation.value = withTiming(5, { duration: 1100 });
 
-    Animated.parallel([
-      Animated.spring(moedaScale, {
-        toValue: 1,
-        friction: 5,
-        tension: 60,
-        useNativeDriver: true,
-      }),
-      // Varias voltas completas antes de assentar - efeito "cara ou coroa"
-      Animated.timing(moedaRotation, {
-        toValue: 5,
-        duration: 1100,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    const timerFase = setTimeout(() => {
       setFase('resultado');
-      mostrarResultado();
-    });
-  };
+    }, 1300);
 
-  const mostrarResultado = () => {
+    return () => clearTimeout(timerFase);
+  }, [fase]);
+
+  useEffect(() => {
+    if (fase !== 'resultado') return;
+
     setTimeout(() => {
       soundManager.playVictory();
     }, 100);
 
-    // Tremor rapido de tela no exato momento do impacto
-    Animated.sequence([
-      Animated.timing(shakeX, { toValue: 8, duration: 40, useNativeDriver: true }),
-      Animated.timing(shakeX, { toValue: -8, duration: 40, useNativeDriver: true }),
-      Animated.timing(shakeX, { toValue: 5, duration: 40, useNativeDriver: true }),
-      Animated.timing(shakeX, { toValue: 0, duration: 40, useNativeDriver: true }),
-    ]).start();
+    shakeX.value = withSequence(
+      withTiming(8, { duration: 40 }),
+      withTiming(-8, { duration: 40 }),
+      withTiming(5, { duration: 40 }),
+      withTiming(0, { duration: 40 })
+    );
 
-    // Confete cai a partir do topo, com atraso escalonado por peca
-    confeteAnims.forEach((anim, i) => {
-      Animated.timing(anim, {
-        toValue: 1,
-        duration: CONFETES_CONFIG[i].duracao,
-        delay: CONFETES_CONFIG[i].atraso,
-        useNativeDriver: true,
-      }).start();
-    });
+    setStartConfetti(true);
 
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(flashOpacity, {
-          toValue: 0.85,
-          duration: 90,
-          useNativeDriver: true,
-        }),
-        Animated.spring(resultadoScale, {
-          toValue: 1,
-          friction: 5,
-          tension: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(resultadoOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.timing(flashOpacity, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.delay(1300),
-      Animated.timing(overlayOpacity, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      if (onCompleto) onCompleto();
-    });
-  };
+    flashOpacity.value = withSequence(
+      withTiming(0.85, { duration: 90 }),
+      withTiming(0, { duration: 250 })
+    );
+    resultadoScale.value = withSpring(1, { damping: 5, stiffness: 50 });
+    resultadoOpacity.value = withTiming(1, { duration: 300 });
 
-  const interpolateMoedaRotation = moedaRotation.interpolate({
-    inputRange: [0, 1, 2, 3, 4, 5],
-    outputRange: ['0deg', '360deg', '720deg', '1080deg', '1440deg', '1800deg'],
-  });
+    const timerFase = setTimeout(() => {
+      overlayOpacity.value = withTiming(0, { duration: 500 });
+      setTimeout(() => setCompletado(true), 500);
+    }, 1800);
 
-  const interpolateGlow = glowPulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.25, 0.55],
-  });
+    return () => clearTimeout(timerFase);
+  }, [fase]);
 
-  const interpolateRaios = raiosRotation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+  useEffect(() => {
+    if (completado && onCompleto) {
+      onCompleto();
+    }
+  }, [completado]);
 
   return (
     <Animated.View
-      style={[styles.overlay, { opacity: overlayOpacity, transform: [{ translateX: shakeX }] }]}
+      style={[styles.overlay, overlayStyle]}
       pointerEvents="auto"
     >
-      <Animated.View style={[styles.flash, { opacity: flashOpacity }]} />
+      <Animated.View style={[styles.flash, flashStyle]} />
 
-      {/* Raios dourados girando lentamente ao fundo, dao profundidade e drama */}
       <Animated.View
-        style={[styles.raiosContainer, { transform: [{ rotate: interpolateRaios }] }]}
+        style={[styles.raiosContainer, raiosStyle]}
         pointerEvents="none"
       >
         {Array.from({ length: NUM_RAIOS }).map((_, i) => (
@@ -211,7 +221,7 @@ export default function AnimacaoInicioBatalha({ jogadorAtivoIndex, nomeJogador, 
       </Animated.View>
 
       {fase === 'intro' && (
-        <Animated.View style={[styles.perguntaContainer, { opacity: perguntaOpacity, transform: [{ scale: perguntaScale }] }]}>
+        <Animated.View style={[styles.perguntaContainer, perguntaStyle]}>
           <Text style={styles.perguntaTexto}>QUEM COMEÇA</Text>
           <Text style={styles.perguntaTextoDestaque}>A BATALHA?</Text>
         </Animated.View>
@@ -219,27 +229,8 @@ export default function AnimacaoInicioBatalha({ jogadorAtivoIndex, nomeJogador, 
 
       {(fase === 'flip' || fase === 'resultado') && (
         <View style={styles.moedaContainer}>
-          <Animated.View
-            style={[
-              styles.glow,
-              {
-                opacity: interpolateGlow,
-                backgroundColor: fase === 'resultado' ? `${corTema}55` : 'rgba(255, 213, 79, 0.3)',
-              },
-            ]}
-          />
-
-          <Animated.View
-            style={[
-              styles.moeda,
-              {
-                transform: [
-                  { scale: moedaScale },
-                  { rotateY: interpolateMoedaRotation },
-                ],
-              },
-            ]}
-          >
+          <Animated.View style={[styles.glow, glowStyle]} />
+          <Animated.View style={[styles.moeda, moedaStyle]}>
             <View style={styles.moedaBorda}>
               <View style={styles.moedaMiolo}>
                 <Text style={styles.moedaSimbolo}>
@@ -253,41 +244,13 @@ export default function AnimacaoInicioBatalha({ jogadorAtivoIndex, nomeJogador, 
 
       {fase === 'resultado' && (
         <>
-          {/* Confete caindo a partir do topo da tela */}
           <View style={styles.confeteWrapper} pointerEvents="none">
-            {CONFETES_CONFIG.map((conf, i) => {
-              const translateY = confeteAnims[i].interpolate({
-                inputRange: [0, 1],
-                outputRange: [-40, SCREEN_HEIGHT * 0.7],
-              });
-              const rotate = confeteAnims[i].interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0deg', `${conf.rotacaoFinal}deg`],
-              });
-              const opacity = confeteAnims[i].interpolate({
-                inputRange: [0, 0.85, 1],
-                outputRange: [1, 1, 0],
-              });
-              return (
-                <Animated.View
-                  key={i}
-                  style={[
-                    styles.confetePeca,
-                    {
-                      left: SCREEN_WIDTH / 2 + conf.x,
-                      width: conf.tamanho,
-                      height: conf.tamanho * 1.6,
-                      backgroundColor: conf.cor,
-                      opacity,
-                      transform: [{ translateY }, { rotate }],
-                    },
-                  ]}
-                />
-              );
-            })}
+            {CONFETES_CONFIG.map((conf, i) => (
+              <ConfetePeca key={i} config={conf} index={i} startAnim={startConfetti} />
+            ))}
           </View>
 
-          <Animated.View style={[styles.resultadoContainer, { opacity: resultadoOpacity, transform: [{ scale: resultadoScale }] }]}>
+          <Animated.View style={[styles.resultadoContainer, resultadoStyle]}>
             <View style={[styles.faixaResultado, { borderColor: corTema }]}>
               <Text style={styles.resultadoLabel}>
                 {isJogadorHumano ? '🎉 COMEÇA' : 'COMEÇA'}
@@ -404,11 +367,6 @@ const styles = StyleSheet.create({
   },
   confeteWrapper: {
     ...StyleSheet.absoluteFillObject,
-  },
-  confetePeca: {
-    position: 'absolute',
-    top: 0,
-    borderRadius: 1,
   },
   resultadoContainer: {
     position: 'absolute',

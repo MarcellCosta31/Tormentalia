@@ -76,7 +76,6 @@ const styles = StyleSheet.create({
   cartaSelecionada: {
     borderColor: '#FFF',
     borderWidth: 4,
-    transform: [{ translateY: -10 }],
   },
   cartaDesabilitada: {
     opacity: 0.4,

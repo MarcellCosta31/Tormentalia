@@ -1,5 +1,14 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, Animated, Dimensions, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Image, Dimensions, Pressable } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  withSpring,
+  withDelay,
+  interpolate,
+} from 'react-native-reanimated';
 import { GameProvider, useGameState } from '../../context/GameContext';
 import { useIA } from '../../hooks/useIA';
 import MaoJogador from './MaoJogador';
@@ -10,60 +19,160 @@ import PainelStatus from './PainelStatus';
 import CartaZoomModal from './CartaZoomModal';
 import { soundManager } from '../../utils/sound';
 
-const bgImg = require('../../assets/sprites/background.png');
+const bgImg = require('../../assets/sprites/background.jpg');
 const traseiraImg = require('../../assets/cards/traseira_cartas.jpg');
 const nossoImg = require('../../assets/cards/nosso.png');
 const toyotinhoImg = require('../../assets/cards/toyotinho.png');
 
 const cardImages = {
-  0: nossoImg,
-  1: toyotinhoImg,
+  ATAQUE:   nossoImg,
+  DEFESA:   toyotinhoImg,
+  PROTECAO: nossoImg,
+  CORINGA:  nossoImg,
+  ACAO:     toyotinhoImg,
+  EFEITO:   nossoImg,
 };
+
+const imgPorCarta = (c) => (c && cardImages[c.tipo]) || traseiraImg;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('screen');
 
 const CARD_W = 70;
 const CARD_H = 98;
+const DECK_W = 58;
+const DECK_H = 81;
+const DECK_GAP = 36;
+
+const DECKS_WRAPPER_Y = SCREEN_HEIGHT * 0.44;
+const DECKS_TOTAL_W = DECK_W * 2 + DECK_GAP;
+const DECKS_START_X = (SCREEN_WIDTH - DECKS_TOTAL_W) / 2;
+
+const DECKS_POS = {
+  drawX: DECKS_START_X,
+  drawY: DECKS_WRAPPER_Y,
+  descX: DECKS_START_X + DECK_W + DECK_GAP,
+  descY: DECKS_WRAPPER_Y,
+};
+
+const POS_MAO_JOGADOR = { x: SCREEN_WIDTH / 2 - 30, y: SCREEN_HEIGHT - 130 };
+
+const LIFT_DURACAO = 200;
+const VOO_DURACAO  = 400;
+const FADE_DURACAO = 120;
+const STAGGER_CARTAS = 220;
 
 function CartaVoadora({ imgSource, deX, deY, paraX, paraY, onCompleto, duracao = 400 }) {
-  const posX = useRef(new Animated.Value(deX)).current;
-  const posY = useRef(new Animated.Value(deY)).current;
-  const escala = useRef(new Animated.Value(1)).current;
-  const opacidade = useRef(new Animated.Value(1)).current;
+  const posX = useSharedValue(deX);
+  const posY = useSharedValue(deY);
+  const escala = useSharedValue(1);
+  const opacidade = useSharedValue(1);
+
+  const style = useAnimatedStyle(() => ({
+    left: posX.value,
+    top: posY.value,
+    opacity: opacidade.value,
+    transform: [{ scale: escala.value }],
+  }));
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(posX, { toValue: paraX, duration: duracao, useNativeDriver: false }),
-        Animated.timing(posY, { toValue: paraY, duration: duracao, useNativeDriver: false }),
-        Animated.timing(escala, { toValue: 0.7, duration: duracao, useNativeDriver: false }),
-      ]),
-      Animated.timing(opacidade, { toValue: 0, duration: 150, useNativeDriver: false }),
-    ]).start(() => {
+    posX.value = withSequence(
+      withTiming(paraX, { duration: duracao }),
+    );
+    posY.value = withSequence(
+      withTiming(paraY, { duration: duracao }),
+    );
+    escala.value = withTiming(0.7, { duration: duracao });
+    opacidade.value = withSequence(
+      withDelay(duracao, withTiming(0, { duration: 150 })),
+    );
+
+    const timer = setTimeout(() => {
       if (onCompleto) onCompleto();
-    });
+    }, duracao + 200);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
-    <Animated.View style={[styles.cartaVoadora, { left: posX, top: posY, opacity: opacidade, transform: [{ scale: escala }] }]}>
+    <Animated.View style={[styles.cartaVoadora, style]}>
+      <Image source={imgSource} style={styles.cartaVoadoraImg} resizeMode="cover" />
+    </Animated.View>
+  );
+}
+
+function CartaSaidaComLift({ imgSource, deX, deY, paraX, paraY, duracao = VOO_DURACAO, delay = 0, onCompleto }) {
+  const posX     = useSharedValue(deX);
+  const posY     = useSharedValue(deY);
+  const escala   = useSharedValue(1);
+  const rotacao  = useSharedValue(0);
+  const opacidade = useSharedValue(1);
+
+  const cbCompleto = onCompleto;
+
+  const style = useAnimatedStyle(() => ({
+    left: posX.value,
+    top: posY.value,
+    opacity: opacidade.value,
+    transform: [
+      { scale: escala.value },
+      { rotate: `${interpolate(rotacao.value, [0, 1], [0, -8])}deg` },
+    ],
+  }));
+
+  useEffect(() => {
+    const somTimer = setTimeout(() => soundManager.playCardPlay(), delay);
+
+    const executarAnimacao = () => {
+      // FASE 1 — lift
+      posY.value = withTiming(deY - 55, { duration: LIFT_DURACAO });
+      escala.value = withTiming(1.22, { duration: LIFT_DURACAO });
+      rotacao.value = withTiming(1, { duration: LIFT_DURACAO });
+
+      // FASE 2 — voo
+      setTimeout(() => {
+        posX.value = withTiming(paraX, { duration: duracao });
+        posY.value = withTiming(paraY, { duration: duracao });
+        escala.value = withTiming(0.7, { duration: duracao });
+        rotacao.value = withTiming(0, { duration: duracao });
+
+        // FASE 3 — fade
+        setTimeout(() => {
+          opacidade.value = withTiming(0, { duration: FADE_DURACAO });
+          setTimeout(() => { if (cbCompleto) cbCompleto(); }, FADE_DURACAO);
+        }, duracao);
+      }, LIFT_DURACAO);
+    };
+
+    const timer = setTimeout(executarAnimacao, delay);
+
+    return () => {
+      clearTimeout(somTimer);
+      clearTimeout(timer);
+    };
+  }, []);
+
+  return (
+    <Animated.View style={[styles.cartaVoadora, style]}>
       <Image source={imgSource} style={styles.cartaVoadoraImg} resizeMode="cover" />
     </Animated.View>
   );
 }
 
 function ArenaInterna() {
-  const { estado, jogarCarta, passarTurno, resetarJogo, dispatch } = useGameState();
-  const [cartaSelecionada, setCartaSelecionada] = useState(null);
-  const [voadora, setVoadora] = useState(null);
-  const [decksPos, setDecksPos] = useState(null);
+  const { estado, passarTurno, resetarJogo, dispatch } = useGameState();
+  const [cartasSelecionadas, setCartasSelecionadas] = useState([]);
+  const [cartasDescarte, setCartasDescarte] = useState([]);
+  const [voadora2, setVoadora2] = useState(null);
   const [panelPressed, setPanelPressed] = useState(false);
   const [cartaZoom, setCartaZoom] = useState(null);
   const longPressTimer = useRef(null);
 
   const { iaExecutando } = useIA(estado, dispatch);
 
+  const MAX_CARTAS_POR_TURNO = 2;
+
   useEffect(() => {
-    setCartaSelecionada(null);
+    setCartasSelecionadas([]);
   }, [estado?.jogadorAtivoIndex, estado?.turnoAtual]);
 
   useEffect(() => {
@@ -85,57 +194,72 @@ function ArenaInterna() {
     ? (jogadorLocal?.nome || 'JOGADOR_HUMANO')
     : (oponenteIA?.nome || 'OPONENTE_IA');
 
-  const handleSelecionarCarta = useCallback((carta) => {
+  const handleToggleSelectCarta = useCallback((carta) => {
     if (!isMinhaVez) return;
-    setCartaSelecionada(carta);
+    setCartasSelecionadas((prev) => {
+      const jaSelecionada = prev.some((c) => c.uid === carta.uid);
+      if (jaSelecionada) {
+        return prev.filter((c) => c.uid !== carta.uid);
+      }
+      if (prev.length >= MAX_CARTAS_POR_TURNO) return prev;
+      return [...prev, carta];
+    });
   }, [isMinhaVez]);
 
-  const handleAnimacaoSaidaCompleta = useCallback((carta) => {
-    const descX = decksPos ? decksPos.descX : SCREEN_WIDTH / 2 + 30;
-    const descY = decksPos ? decksPos.descY : SCREEN_HEIGHT * 0.4;
-    const cartaImg = cardImages[carta.uid % 2];
+  const handleJogarMao = useCallback(() => {
+    if (!isMinhaVez || cartasSelecionadas.length === 0) return;
 
-    setVoadora({
-      key: 'descarte_' + Date.now(),
-      imgSource: cartaImg,
-      deX: SCREEN_WIDTH - 120,
-      deY: SCREEN_HEIGHT - 120,
-      paraX: descX,
-      paraY: descY,
-      onCompleto: () => {
-        if (carta.precisaAlvo) {
-          jogarCarta(jogadorLocal.id, carta.uid, oponenteIA.id);
-        } else {
-          jogarCarta(jogadorLocal.id, carta.uid, null);
-        }
-        setCartaSelecionada(null);
+    const cartasParaJogar = [...cartasSelecionadas];
+    setCartasSelecionadas([]);
 
-        setTimeout(() => {
-          const drawX = decksPos ? decksPos.drawX : SCREEN_WIDTH / 2 - 65;
-          const drawY = decksPos ? decksPos.drawY : SCREEN_HEIGHT * 0.4;
-          setVoadora({
-            key: 'comprar_' + Date.now(),
-            imgSource: traseiraImg,
-            deX: drawX,
-            deY: drawY,
-            paraX: SCREEN_WIDTH - 120,
-            paraY: SCREEN_HEIGHT - 100,
-            onCompleto: () => setVoadora(null),
-          });
-        }, 100);
-      },
+    dispatch({
+      type: 'JOGAR_CARTAS_SEM_COMPRA',
+      payload: { jogadorId: jogadorLocal.id, cartas: cartasParaJogar },
     });
-  }, [jogadorLocal, oponenteIA, jogarCarta, decksPos]);
+
+    const novasVoadoras = cartasParaJogar.map((carta, i) => {
+      const key = `saida_${i}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      return {
+        key,
+        imgSource: imgPorCarta(carta),
+        deX: POS_MAO_JOGADOR.x + i * 16,
+        deY: POS_MAO_JOGADOR.y - i * 6,
+        paraX: DECKS_POS.descX,
+        paraY: DECKS_POS.descY,
+        duracao: VOO_DURACAO,
+        delay: i * STAGGER_CARTAS,
+        onCompleto: () => setCartasDescarte((prev) => prev.filter((v) => v.key !== key)),
+      };
+    });
+    setCartasDescarte((prev) => [...prev, ...novasVoadoras]);
+
+    const tempoUltimaSaida = (cartasParaJogar.length - 1) * STAGGER_CARTAS
+                           + LIFT_DURACAO + VOO_DURACAO + FADE_DURACAO;
+    const atrasoCompra = tempoUltimaSaida + 100;
+
+    setTimeout(() => {
+      setVoadora2({
+        key: `comprar_${Date.now()}`,
+        imgSource: traseiraImg,
+        deX: DECKS_POS.drawX,
+        deY: DECKS_POS.drawY,
+        paraX: POS_MAO_JOGADOR.x,
+        paraY: POS_MAO_JOGADOR.y,
+        duracao: 400,
+        onCompleto: () => {
+          setVoadora2(null);
+          soundManager.playCardDraw();
+          passarTurno();
+        },
+      });
+    }, atrasoCompra);
+  }, [isMinhaVez, cartasSelecionadas, jogadorLocal, passarTurno, dispatch]);
 
   const handlePassarTurno = useCallback(() => {
     if (!isMinhaVez) return;
+    setCartasSelecionadas([]);
     passarTurno();
-    setCartaSelecionada(null);
   }, [isMinhaVez, passarTurno]);
-
-  const handleDecksLayout = useCallback((drawX, drawY, descX, descY) => {
-    setDecksPos({ drawX, drawY, descX, descY });
-  }, []);
 
   const handlePanelPressIn = () => {
     if (!isMinhaVez) return;
@@ -160,10 +284,8 @@ function ArenaInterna() {
     <View style={styles.container}>
       <Image source={bgImg} style={styles.bg} resizeMode="cover" />
 
-      {/* Luz de holofote sobre a mesa central */}
       <View style={styles.spotlight} pointerEvents="none" />
 
-      {/* Top Left: Placa de madeira pendurada por correntes */}
       <View style={styles.topLeftWrapper}>
         <TurnoIndicador
           nomeJogadorAtivo={nomeJogadorAtivo}
@@ -172,21 +294,17 @@ function ArenaInterna() {
         />
       </View>
 
-      {/* Top Center: Painel do Oponente + Mão do Oponente (cartas viradas) */}
       <View style={styles.topCenterWrapper}>
         <MaoOponente jogador={oponenteIA} hideStatus={false} />
       </View>
 
-      {/* Center Table: Baralho (esquerda) e Descarte (direita) */}
       <View style={styles.centerDecksWrapper}>
         <DecksArea
           baralho={estado.baralho}
           pilhaDescarte={estado.pilhaDescarte}
-          onLayout={handleDecksLayout}
         />
       </View>
 
-      {/* Bottom Center: Painel de Status do Jogador Humano */}
       <View style={styles.bottomCenterWrapper}>
         <Pressable
           onPressIn={handlePanelPressIn}
@@ -202,32 +320,52 @@ function ArenaInterna() {
         </Pressable>
       </View>
 
-      {/* Bottom Right: Mão do Jogador Humano em Leque */}
       <View style={styles.bottomRightWrapper}>
         <MaoJogador
           jogador={jogadorLocal}
-          cartaSelecionada={cartaSelecionada}
-          onSelecionarCarta={handleSelecionarCarta}
-          onAnimacaoSaidaCompleta={handleAnimacaoSaidaCompleta}
+          cartasSelecionadas={cartasSelecionadas}
+          onSelecionarCarta={handleToggleSelectCarta}
           onDescartar={handlePassarTurno}
           desabilitado={jogadoresDesabilitado}
           hideStatus={true}
-          onZoomCarta={(carta) => {
-            console.log('[ZOOM DEBUG] ArenaCombate: setCartaZoom chamado para:', carta?.titulo || carta?.nome);
-            setCartaZoom(carta);
-          }}
+          onZoomCarta={(carta) => setCartaZoom(carta)}
         />
       </View>
 
-      {voadora && (
+      {isMinhaVez && cartasSelecionadas.length > 0 && (
+        <Pressable
+          style={styles.botaoJogar}
+          onPress={handleJogarMao}
+        >
+          <Text style={styles.botaoJogarTexto}>JOGAR</Text>
+          <Text style={styles.botaoJogarContador}>{cartasSelecionadas.length}/{MAX_CARTAS_POR_TURNO}</Text>
+        </Pressable>
+      )}
+
+      {cartasDescarte.map((v) => (
+        <CartaSaidaComLift
+          key={v.key}
+          imgSource={v.imgSource}
+          deX={v.deX}
+          deY={v.deY}
+          paraX={v.paraX}
+          paraY={v.paraY}
+          duracao={v.duracao}
+          delay={v.delay}
+          onCompleto={v.onCompleto}
+        />
+      ))}
+
+      {voadora2 && (
         <CartaVoadora
-          key={voadora.key}
-          imgSource={voadora.imgSource}
-          deX={voadora.deX}
-          deY={voadora.deY}
-          paraX={voadora.paraX}
-          paraY={voadora.paraY}
-          onCompleto={voadora.onCompleto}
+          key={voadora2.key}
+          imgSource={voadora2.imgSource}
+          deX={voadora2.deX}
+          deY={voadora2.deY}
+          paraX={voadora2.paraX}
+          paraY={voadora2.paraY}
+          duracao={voadora2.duracao}
+          onCompleto={voadora2.onCompleto}
         />
       )}
 
@@ -247,15 +385,11 @@ function ArenaInterna() {
           </View>
         </View>
       )}
-      {/* Zoom de Carta — renderizado no nível raiz para cobrir toda a tela */}
-      {console.log('[ZOOM DEBUG] Renderizando CartaZoomModal, cartaZoom:', cartaZoom?.titulo || cartaZoom?.nome || 'null')}
+
       <CartaZoomModal
         carta={cartaZoom}
         visivel={!!cartaZoom}
-        onFechar={() => {
-          console.log('[ZOOM DEBUG] Fechando modal...');
-          setCartaZoom(null);
-        }}
+        onFechar={() => setCartaZoom(null)}
       />
     </View>
   );
@@ -336,7 +470,9 @@ const styles = StyleSheet.create({
   bottomRightWrapper: {
     position: 'absolute',
     bottom: 0,
-    right: 8,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
     zIndex: 25,
   },
   cartaVoadora: {
@@ -394,5 +530,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     overflow: 'hidden',
   },
+  botaoJogar: {
+    position: 'absolute',
+    bottom: 20,
+    left: 12,
+    backgroundColor: '#2E7D32',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 30,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: '#66BB6A',
+  },
+  botaoJogarTexto: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+    letterSpacing: 1,
+  },
+  botaoJogarContador: {
+    color: '#C8E6C9',
+    fontSize: 11,
+    marginTop: 2,
+  },
 });
-
