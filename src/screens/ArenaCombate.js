@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, Pressable, Modal, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, Image, Dimensions, Pressable, Modal, TouchableOpacity, Alert } from 'react-native';
+import Text from '../components/Texto';
 import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring, withDelay } from 'react-native-reanimated';
 import { GameProvider, useGameState } from '../context/GameContext';
 import { useIA } from '../hooks/useIA';
@@ -10,45 +11,54 @@ import TurnoIndicador from '../components/arena/TurnoIndicador';
 import DecksArea from '../components/arena/DecksArea';
 import PainelStatus from '../components/arena/PainelStatus';
 import CartaZoomModal from '../components/arena/CartaZoomModal';
+import DestaqueCoringa, { DURACAO_DESTAQUE_CORINGA } from '../components/arena/DestaqueCoringa';
+import ResultadoJogada, { DURACAO_ZOOM_RESULTADO } from '../components/arena/ResultadoJogada';
+import ModalRouboCego from '../components/arena/ModalRouboCego';
 import AnimacaoInicioBatalha from '../components/arena/AnimacaoInicioBatalha';
 import ParticleBurst from '../components/arena/Particles';
 import ScorePopup from '../components/arena/ScorePopup';
+import AreaSegura from '../components/arena/AreaSegura';
+import FundoMadeira from '../components/arena/FundoMadeira';
 import { screenShake } from '../utils/screenShake';
 import { soundManager } from '../utils/sound';
+import { getAvatarById } from '../utils/avatar';
+import { artePorCarta } from '../cards/arteCarta';
+import { TIPO_CARTA } from '../cards/cartasTGA';
+import { duracaoTurno, TURNO_BASE_SEGUNDOS } from '../cards/motorEfeitos';
 
-const bgImg = require('../assets/sprites/batalha/background.jpg');
 const traseiraImg = require('../assets/cards/traseira_cartas.jpg');
-const nossoImg = require('../assets/cards/nosso.png');
-const toyotinhoImg = require('../assets/cards/toyotinho.png');
 const pauseImg = require('../assets/sprites/menu/pause.jpg');
+const adamSmithImg = require('../assets/avatares/Adam_Smith.png');
 
-const cardImages = {
-  ATAQUE:   nossoImg,
-  DEFESA:   toyotinhoImg,
-  PROTECAO: nossoImg,
-  CORINGA:  nossoImg,
-  ACAO:     toyotinhoImg,
-  EFEITO:   nossoImg,
-};
-
-const imgPorCarta = (c) => (c && cardImages[c.tipo]) || traseiraImg;
+const imgPorCarta = (c) => artePorCarta(c) || traseiraImg;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const CARD_W = 60;
 const CARD_H = 84;
 
-const DECK_W = 58;
-const DECK_H = 81;
 const DECK_GAP = 36;
-const DECKS_Y = SCREEN_HEIGHT * 0.44 + DECK_H / 2;
-const DECK_DRAW_X = SCREEN_WIDTH / 2 - DECK_W - DECK_GAP / 2;
-const DECK_DESC_X = SCREEN_WIDTH / 2 + DECK_GAP / 2;
+const DECK_DRAW_W = 50;
+const DECK_DRAW_H = 70;
+const DECK_DESC_W = 64;
+const DECK_DESC_H = 90;
+
+// DecksArea fica em `top: SCREEN_HEIGHT * 0.44` com paddingVertical 6,
+// e as duas pilhas sao centralizadas na mesma linha (altura = maior pilha).
+const DECKS_ROW_TOP = SCREEN_HEIGHT * 0.44 + 6;
+const DECKS_ROW_H = Math.max(DECK_DRAW_H, DECK_DESC_H);
+const DECKS_ROW_X = (SCREEN_WIDTH - (DECK_DRAW_W + DECK_GAP + DECK_DESC_W)) / 2;
+
+// Canto superior-esquerdo da carta voando, centralizado sobre cada pilha.
+const DECK_DRAW_X = DECKS_ROW_X + (DECK_DRAW_W - CARD_W) / 2;
+const DECK_DESC_X = DECKS_ROW_X + DECK_DRAW_W + DECK_GAP + (DECK_DESC_W - CARD_W) / 2;
+const DECK_DRAW_Y = DECKS_ROW_TOP + (DECKS_ROW_H - DECK_DRAW_H) / 2 + (DECK_DRAW_H - CARD_H) / 2;
+const DECK_DESC_Y = DECKS_ROW_TOP + (DECKS_ROW_H - DECK_DESC_H) / 2 + (DECK_DESC_H - CARD_H) / 2;
 
 const POS_MAO_JOGADOR = { x: SCREEN_WIDTH / 2 - 30, y: SCREEN_HEIGHT - 120 };
 const POS_MAO_OPONENTE = { x: SCREEN_WIDTH / 2 - 30, y: 30 };
 
-const DECKS_POS = { drawX: DECK_DRAW_X, drawY: DECKS_Y, descX: DECK_DESC_X, descY: DECKS_Y };
+const DECKS_POS = { drawX: DECK_DRAW_X, drawY: DECK_DRAW_Y, descX: DECK_DESC_X, descY: DECK_DESC_Y };
 
 // Durações das animações (constantes pra ajuste fino).
 const LIFT_DURACAO = 200;
@@ -75,17 +85,17 @@ function CartaVoadora({ imgSource, deX, deY, paraX, paraY, onCompleto, duracao =
   }));
 
   useEffect(() => {
-    const rotacaoAleatoria = (Math.random() - 0.5) * 8;
+    const rotacaoAleatoria = (Math.random() - 0.5) * 3;
 
     posX.value = withSequence(
       withTiming(paraX, { duration: duracao }),
     );
     posY.value = withSequence(
-      withTiming(Math.min(deY, paraY) - 30, { duration: duracao * 0.5 }),
-      withSpring(paraY, { damping: 6, stiffness: 40 }),
+      withTiming(Math.min(deY, paraY) - 18, { duration: duracao * 0.5 }),
+      withSpring(paraY, { damping: 10, stiffness: 50 }),
     );
-    escala.value = withTiming(0.6, { duration: duracao });
-    rotacao.value = withSpring(rotacaoAleatoria, { damping: 5, stiffness: 50 });
+    escala.value = withTiming(0.7, { duration: duracao });
+    rotacao.value = withSpring(rotacaoAleatoria, { damping: 10, stiffness: 60 });
     opacidade.value = withSequence(
       withDelay(duracao, withTiming(0, { duration: 150 })),
     );
@@ -126,26 +136,26 @@ function CartaSaidaComLift({ imgSource, deX, deY, paraX, paraY, duracao = VOO_DU
   }));
 
   useEffect(() => {
-    const rotacaoAleatoria = (Math.random() - 0.5) * 10;
+    const rotacaoAleatoria = (Math.random() - 0.5) * 4;
 
     const executarAnimacao = () => {
       soundManager.playCardPlay();
 
       // FASE 1 — desprende da mão com bounce spring
-      posY.value = withSpring(deY - 55, { damping: 5, stiffness: 80 });
-      escala.value = withSpring(1.22, { damping: 4, stiffness: 100 });
-      rotacao.value = withSpring(rotacaoAleatoria, { damping: 5, stiffness: 60 });
+      posY.value = withSpring(deY - 35, { damping: 9, stiffness: 110 });
+      escala.value = withSpring(1.1, { damping: 10, stiffness: 110 });
+      rotacao.value = withSpring(rotacaoAleatoria, { damping: 11, stiffness: 80 });
 
       // FASE 2 — voa pro descarte com curva parabólica (após lift)
       const liftDuracao = 200;
       setTimeout(() => {
         posX.value = withTiming(paraX, { duration: duracao });
         posY.value = withSequence(
-          withTiming(Math.min(deY, paraY) - 40, { duration: duracao * 0.5 }),
-          withSpring(paraY, { damping: 6, stiffness: 40 }),
+          withTiming(Math.min(deY, paraY) - 25, { duration: duracao * 0.5 }),
+          withSpring(paraY, { damping: 10, stiffness: 50 }),
         );
-        escala.value = withSpring(0.7, { damping: 6, stiffness: 30 });
-        rotacao.value = withSpring(0, { damping: 7, stiffness: 50 });
+        escala.value = withSpring(0.75, { damping: 11, stiffness: 60 });
+        rotacao.value = withSpring(0, { damping: 12, stiffness: 80 });
 
         // FASE 3 — fade out ao encostar no descarte
         setTimeout(() => {
@@ -167,18 +177,37 @@ function CartaSaidaComLift({ imgSource, deX, deY, paraX, paraY, duracao = VOO_DU
   );
 }
 
-function ArenaInterna({ onVoltar, multiplayerConfig }) {
+function ArenaInterna({ onVoltar, multiplayerConfig, perfil }) {
   const { estado, passarTurno, resetarJogo, dispatch } = useGameState();
-  const [cartasSelecionadas, setCartasSelecionadas] = useState([]);
-  const [cartasDescarte, setCartasDescarte] = useState([]); // array de voadoras indo pro descarte
-  const [voadora2, setVoadora2] = useState(null);           // compra (baralho → mão)
-  const [panelPressed, setPanelPressed] = useState(false);
-  const [cartaZoom, setCartaZoom] = useState(null);
-  const [modalPausa, setModalPausa] = useState(false);
-  const [particlesData, setParticlesData] = useState({ visivel: false, x: 0, y: 0, cores: null });
-  const [scorePopups, setScorePopups] = useState([]);
-  const [cartaRecemCompradaUid, setCartaRecemCompradaUid] = useState(null);
-  const longPressTimer = useRef(null);
+const [cartasSelecionadas, setCartasSelecionadas] = useState([]);
+   const [cartasDescarte, setCartasDescarte] = useState([]);
+   const [voadora2, setVoadora2] = useState(null);
+   const [panelPressed, setPanelPressed] = useState(false);
+   const [cartaZoom, setCartaZoom] = useState(null);
+   const [modalPausa, setModalPausa] = useState(false);
+   const [particlesData, setParticlesData] = useState({ visivel: false, x: 0, y: 0, cores: null });
+   const [scorePopups, setScorePopups] = useState([]);
+   const [cartaRecemCompradaUid, setCartaRecemCompradaUid] = useState(null);
+   const [areaSeguraVisivel, setAreaSeguraVisivel] = useState(true);
+   const [areaSeguraSelecionadas, setAreaSeguraSelecionadas] = useState([]);
+  // true enquanto as cartas jogadas voam pro descarte (pausa o timer).
+  const [jogandoEmAndamento, setJogandoEmAndamento] = useState(false);
+  // Pendencia do roubo as cegas (carta Vigarice): { cartas, uidCarta,
+  // quantidade, alvos: [{ idx, nome, mao }] }.
+  const [modalRoubo, setModalRoubo] = useState(null);
+  // Destaque da carta coringa jogada (pausa o turno por alguns segundos).
+  const [destaqueCoringa, setDestaqueCoringa] = useState(null);
+  const destaqueRef = useRef(false);
+  // Zoom de SUCESSO/FALHA das cartas jogadas (2s antes da animacao).
+  const [zoomResultado, setZoomResultado] = useState(null);
+  const resultadoRef = useRef(false);
+  const resultadoVistoSeqRef = useRef(0);
+  // Coringas da mesma leva que esperam o zoom fechar para abrir o
+  // destaque deles.
+  const pendenciaCoringaRef = useRef([]);
+   const longPressTimer = useRef(null);
+   // Evita passar o turno 2x no mesmo turno (timer x clique manual).
+   const passouNesteTurnoRef = useRef(null);
   const iaAnimacaoProcessada = useRef(null);
   const estadoRef = useRef(estado);
   const estadoEnviadoRef = useRef(null);
@@ -192,6 +221,70 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
   useEffect(() => {
     estadoRef.current = estado;
   }, [estado]);
+
+  // ------------------------------------------------------------------
+  // RESULTADO DAS JOGADAS (zoom SUCESSO/FALHA) + DESTAQUE DE CORINGA.
+  // Quem quer que jogue (humano, IA ou remoto): o motor grava cada
+  // jogada em estado.ultimasJogadas. O zoom fica 2s; coringas abrem o
+  // destaque DEPOIS do zoom fechar. O turno so continua depois dos
+  // dois (executarJogadaMao espera, a IA reaguarda via iaPausadaRef e
+  // o timer fica pausado em tempoPausado).
+  // ------------------------------------------------------------------
+  const fecharDestaque = useCallback(() => {
+    destaqueRef.current = false;
+    setDestaqueCoringa(null);
+  }, []);
+
+  const abrirDestaqueCoringa = (entrada) => {
+    destaqueRef.current = true;
+    setDestaqueCoringa({ carta: entrada.carta, sucesso: entrada.sucesso });
+    screenShake(shakeX, shakeY, 10);
+    soundManager.playCardPlay();
+  };
+
+  const fecharZoomResultado = () => {
+    resultadoRef.current = false;
+    setZoomResultado(null);
+    const pend = pendenciaCoringaRef.current;
+    pendenciaCoringaRef.current = [];
+    if (pend.length > 0) abrirDestaqueCoringa(pend[0]);
+  };
+
+  useEffect(() => {
+    const lista = estado?.ultimasJogadas;
+    if (!lista) return;
+    if (lista.length === 0) {
+      // Partida nova/reiniciada: zera o cursor de seq.
+      resultadoVistoSeqRef.current = 0;
+      return;
+    }
+    const novas = lista.filter((r) => r.seq > resultadoVistoSeqRef.current);
+    const ultimoSeq = lista[lista.length - 1].seq;
+    resultadoVistoSeqRef.current = Math.max(resultadoVistoSeqRef.current, ultimoSeq);
+    if (novas.length === 0) return;
+
+    const coringas = novas.filter((r) => r.carta && r.carta.tipo === TIPO_CARTA.CORINGA);
+    const normais = novas.filter((r) => !r.carta || r.carta.tipo !== TIPO_CARTA.CORINGA);
+
+    if (normais.length > 0) {
+      pendenciaCoringaRef.current = coringas;
+      resultadoRef.current = true;
+      setZoomResultado(normais);
+      normais.forEach((r) => {
+        if (r.sucesso) soundManager.playScoreGain();
+        else soundManager.playScoreLose();
+      });
+    } else if (coringas.length > 0) {
+      abrirDestaqueCoringa(coringas[0]);
+    }
+  }, [estado?.ultimasJogadas]);
+
+  // Pausa a IA enquanto qualquer destaque/zoom estiver em tela.
+  const iaPausadaRef = {
+    get current() {
+      return destaqueRef.current || resultadoRef.current;
+    },
+  };
 
   const enviarEstadoRef = useRef(null);
 
@@ -240,7 +333,7 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
     // Cliente NÃO gera estado — recebe tudo do host.
   }, [isMultiplayer, isHost, estado?.isMultiplayer, multiplayerConfig, dispatch]);
 
-  const iaHook = useIA(estado, dispatch);
+  const iaHook = useIA(estado, dispatch, iaPausadaRef);
   const iaExecutando = !isMultiplayer ? iaHook.iaExecutando : false;
 
   const MAX_CARTAS_POR_TURNO = 2;
@@ -256,11 +349,17 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
 
   useEffect(() => {
     setCartasSelecionadas([]);
+    setAreaSeguraSelecionadas([]);
+    setJogandoEmAndamento(false);
     iaAnimacaoProcessada.current = null;
   }, [estado?.jogadorAtivoIndex, estado?.turnoAtual]);
 
   const jogadorLocal = isMultiplayer && !isHost ? estado?.jogadores[1] : estado?.jogadores[0];
   const oponenteIA = isMultiplayer && !isHost ? estado?.jogadores[0] : estado?.jogadores[1];
+
+  // Avatar do jogador = o escolhido na tela de perfil; IA = Adam_Smith
+  const avatarJogadorFonte = getAvatarById(perfil?.avatar || '7');
+  const avatarIaFonte = adamSmithImg;
 
   const meuIndice = isMultiplayer && !isHost ? 1 : 0;
   const isMinhaVez = estado?.jogadorAtivoIndex === meuIndice && !estado?.fimDeJogo;
@@ -269,6 +368,17 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
   const nomeJogadorAtivo = isMinhaVez
     ? (jogadorLocal?.nome || 'JOGADOR')
     : (oponenteIA?.nome || 'OPONENTE');
+
+  // ------------------ Timer de turno (20s + efeitos TEMPO_TURNO) --
+  const jogadorAtivoTimer = estado?.jogadores?.[estado?.jogadorAtivoIndex];
+  const duracaoTimer = jogadorAtivoTimer
+    ? duracaoTurno(jogadorAtivoTimer)
+    : TURNO_BASE_SEGUNDOS;
+  const chaveTimer = `${estado?.jogadorAtivoIndex ?? 0}_${estado?.turnoAtual ?? 1}`;
+  // 1P: contagem so no turno humano (a IA sempre termina o turno sozinha).
+  // MP: host e cliente veem a contagem; so o host manda passar a vez.
+  const tempoAtivo =
+    !!estado?.batalhaIniciada && !estado?.fimDeJogo && (isMultiplayer || isMinhaVez);
 
   useEffect(() => {
     if (estado?.fimDeJogo) {
@@ -374,86 +484,165 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
     });
   }, [isMinhaVez]);
 
-  const handleJogarMao = useCallback(() => {
+  const handleColocarAreaSegura = useCallback(() => {
     if (!isMinhaVez || cartasSelecionadas.length === 0) return;
-
-    const cartasParaJogar = [...cartasSelecionadas];
+    const carta = cartasSelecionadas[0];
     setCartasSelecionadas([]);
+    if (isMultiplayer && !isHost) {
+      enviarAcaoCliente({
+        type: 'COLOCAR_AREA_SEGURA',
+        payload: { jogadorId: jogadorLocal.id, cartaUid: carta.uid },
+      });
+    } else {
+      dispatch({ type: 'COLOCAR_AREA_SEGURA', payload: { jogadorId: jogadorLocal.id, cartaUid: carta.uid } });
+    }
+  }, [isMinhaVez, cartasSelecionadas, jogadorLocal, isMultiplayer, isHost, enviarAcaoCliente, dispatch]);
+
+  // Usar carta da Area Segura: funciona até fora do turno (vai direto
+  // pro descarte). Não checa isMinhaVez de propósito.
+  const handleJogarAreaSegura = useCallback((jogadorId, cartaUid) => {
+    if (isMultiplayer && !isHost) {
+      enviarAcaoCliente({
+        type: 'JOGAR_AREA_SEGURA',
+        payload: { jogadorId, cartaUid },
+      });
+    } else {
+      dispatch({ type: 'JOGAR_AREA_SEGURA', payload: { jogadorId, cartaUid } });
+    }
+  }, [isMultiplayer, isHost, enviarAcaoCliente, dispatch]);
+
+  // Executa a jogada da mão (aplica + anima + passa no fim).
+  // mapaRoubo: { [uidDaVigarice]: [uidsEscolhidas] } (roubo às cegas).
+  const executarJogadaMao = (cartasParaJogar, mapaRoubo) => {
+    setCartasSelecionadas([]);
+    setJogandoEmAndamento(true);
 
     // 1) Aplica jogada IMEDIATAMENTE (cartas saem da mão, entram no descarte).
     if (isMultiplayer && !isHost) {
       cartasParaJogar.forEach((c) => {
         enviarAcaoCliente({
           type: 'JOGAR_CARTA_SEM_COMPRA',
-          payload: { jogadorId: jogadorLocal.id, cartaUid: c.uid, jogadorAlvoId: null },
+          payload: {
+            jogadorId: jogadorLocal.id,
+            cartaUid: c.uid,
+            jogadorAlvoId: null,
+            roubarUids: mapaRoubo ? mapaRoubo[c.uid] || null : null,
+          },
         });
       });
     } else {
       dispatch({
         type: 'JOGAR_CARTAS_SEM_COMPRA',
-        payload: { jogadorId: jogadorLocal.id, cartas: cartasParaJogar },
+        payload: {
+          jogadorId: jogadorLocal.id,
+          cartas: cartasParaJogar.map((c) =>
+            mapaRoubo && mapaRoubo[c.uid] ? { ...c, roubarUids: mapaRoubo[c.uid] } : c
+          ),
+        },
       });
     }
 
-    // 2) Anima cada carta saindo da mão (lift + voo + fade), com stagger.
-    const novasVoadoras = cartasParaJogar.map((carta, i) => {
-      const key = `saida_${i}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      return {
-        key,
-        tipo: 'lift',
-        imgSource: imgPorCarta(carta),
-        deX: POS_MAO_JOGADOR.x + i * 16,
-        deY: POS_MAO_JOGADOR.y - i * 6,
-        paraX: DECKS_POS.descX,
-        paraY: DECKS_POS.descY,
-        duracao: VOO_DURACAO,
-        delay: i * STAGGER_CARTAS,
-        onCompleto: () => setCartasDescarte((prev) => prev.filter((v) => v.key !== key)),
-      };
-    });
-    setCartasDescarte((prev) => [...prev, ...novasVoadoras]);
+    // 2) Primeiro os destaques em tela: zoom de SUCESSO/FALHA (2s) e,
+    //    se a leva tem coringa, o destaque dele (3s) em seguida. SO
+    //    DEPOIS as cartas saem da mão pro descarte.
+    const temCoringa = cartasParaJogar.some((c) => c.tipo === TIPO_CARTA.CORINGA);
+    const temNormal = cartasParaJogar.some((c) => c.tipo !== TIPO_CARTA.CORINGA);
+    const esperaZoom = temNormal ? DURACAO_ZOOM_RESULTADO : 0;
+    const esperaCoringa = temCoringa ? DURACAO_DESTAQUE_CORINGA : 0;
 
-    // 3) Agenda compra para depois da última carta chegar ao descarte.
-    const tempoUltimaSaida =
-      (cartasParaJogar.length - 1) * STAGGER_CARTAS + LIFT_DURACAO + VOO_DURACAO + FADE_DURACAO;
-    const atrasoCompra = tempoUltimaSaida + 100;
-
-    setTimeout(() => {
-      setVoadora2({
-        key: `comprar_${Date.now()}`,
-        imgSource: traseiraImg,
-        deX: DECKS_POS.drawX,
-        deY: DECKS_POS.drawY,
-        paraX: POS_MAO_JOGADOR.x,
-        paraY: POS_MAO_JOGADOR.y,
-        duracao: 400,
-        onCompleto: () => {
-          setVoadora2(null);
-          soundManager.playCardDraw();
-
-          // 4) SÓ AGORA passa o turno (fimDeTurno compra 1 pro jogador ativo).
-          if (isMultiplayer && !isHost) {
-            enviarAcaoCliente({ type: 'PASSAR_TURNO' });
-          } else {
-            passarTurno();
-          }
-        },
+    const iniciarSaida = () => {
+      // Anima cada carta saindo da mão (lift + voo + fade), com stagger.
+      const novasVoadoras = cartasParaJogar.map((carta, i) => {
+        const key = `saida_${i}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        return {
+          key,
+          tipo: 'lift',
+          imgSource: imgPorCarta(carta),
+          deX: POS_MAO_JOGADOR.x + i * 16,
+          deY: POS_MAO_JOGADOR.y - i * 6,
+          paraX: DECKS_POS.descX,
+          paraY: DECKS_POS.descY,
+          duracao: VOO_DURACAO,
+          delay: i * STAGGER_CARTAS,
+          onCompleto: () => setCartasDescarte((prev) => prev.filter((v) => v.key !== key)),
+        };
       });
-    }, atrasoCompra);
-  }, [
-    isMinhaVez,
-    cartasSelecionadas,
-    jogadorLocal,
-    passarTurno,
-    isMultiplayer,
-    isHost,
-    enviarAcaoCliente,
-    dispatch,
-  ]);
+      setCartasDescarte((prev) => [...prev, ...novasVoadoras]);
 
-  const handlePassarTurno = useCallback(() => {
-    if (!isMinhaVez) return;
+      // 3) Agenda compra para depois da última carta chegar ao descarte.
+      const tempoUltimaSaida =
+        (cartasParaJogar.length - 1) * STAGGER_CARTAS + LIFT_DURACAO + VOO_DURACAO + FADE_DURACAO;
+      const atrasoCompra = tempoUltimaSaida + 100;
+
+      setTimeout(() => {
+        setVoadora2({
+          key: `comprar_${Date.now()}`,
+          imgSource: traseiraImg,
+          deX: DECKS_POS.drawX,
+          deY: DECKS_POS.drawY,
+          paraX: POS_MAO_JOGADOR.x,
+          paraY: POS_MAO_JOGADOR.y,
+          duracao: 400,
+          onCompleto: () => {
+            setVoadora2(null);
+            soundManager.playCardDraw();
+
+            // 4) SÓ AGORA passa o turno (fimDeTurno compra 1 pro jogador ativo).
+            executarPassar();
+            setJogandoEmAndamento(false);
+          },
+        });
+      }, atrasoCompra);
+    };
+
+    const atrasoSaida = esperaZoom + esperaCoringa;
+    if (atrasoSaida > 0) setTimeout(iniciarSaida, atrasoSaida);
+    else iniciarSaida();
+  };
+
+  const handleJogarMao = () => {
+    if (!isMinhaVez || cartasSelecionadas.length === 0) return;
+
+    const cartasParaJogar = [...cartasSelecionadas];
+
+    // Vigarice na seleção? Interrompe e abre o roubo às cegas primeiro.
+    const vigarice = cartasParaJogar.find((c) => c.efeito?.tipo === 'ROUBA_CARTAS');
+    if (vigarice) {
+      const idxAlvo = meuIndice === 0 ? 1 : 0;
+      const maoAlvo = estado?.jogadores?.[idxAlvo]?.mao || [];
+      if (maoAlvo.length > 0) {
+        setModalRoubo({
+          cartas: cartasParaJogar,
+          uidCarta: vigarice.uid,
+          quantidade: vigarice.efeito.quantidade || 2,
+          alvos: [{ idx: idxAlvo, nome: estado.jogadores[idxAlvo].nome, mao: maoAlvo }],
+        });
+        return;
+      }
+    }
+    executarJogadaMao(cartasParaJogar, null);
+  };
+
+  const confirmarRouboCego = (alvoIdx, uids) => {
+    const pend = modalRoubo;
+    setModalRoubo(null);
+    if (!pend) return;
+    executarJogadaMao(pend.cartas, { [pend.uidCarta]: uids });
+  };
+
+  // Cancela o modal: as cartas continuam selecionadas para o jogador
+  // decidir de novo (nada foi jogado ainda).
+  const cancelarRouboCego = () => setModalRoubo(null);
+
+  // Passa a vez SEM checar isMinhaVez (usado pelo timer, que no MP pode
+  // expirar o turno do cliente pelo host). A guarda por chave de turno
+  // impede pass duplicado no mesmo turno (timer x clique manual).
+  const executarPassar = () => {
+    if (passouNesteTurnoRef.current === chaveTimer) return;
+    passouNesteTurnoRef.current = chaveTimer;
+
     setCartasSelecionadas([]);
+    setAreaSeguraSelecionadas([]);
 
     if (isMultiplayer && isHost) {
       passarTurno();
@@ -462,9 +651,35 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
     } else {
       passarTurno();
     }
-  }, [isMinhaVez, passarTurno, isMultiplayer, isHost, enviarAcaoCliente]);
+  };
+
+  const handlePassarTurno = () => {
+    if (!isMinhaVez) return;
+    // Durante o zoom de resultado ou destaque de coringa o turno nao
+    // pode continuar.
+    if (destaqueRef.current || resultadoRef.current) return;
+    executarPassar();
+  };
+
+  // Timer esgotou: em 1P so roda no turno humano (garantido por tempoAtivo);
+  // em MP so o host e autoritativo, o cliente aguarda o sync do estado.
+  const handleTempoEsgotado = () => {
+    if (isMultiplayer && !isHost) return;
+    if (destaqueRef.current || resultadoRef.current) return;
+    soundManager.playPassTurn();
+    executarPassar();
+  };
 
   const handleResetarJogo = useCallback(() => {
+    passouNesteTurnoRef.current = null;
+    setJogandoEmAndamento(false);
+    setModalRoubo(null);
+    destaqueRef.current = false;
+    setDestaqueCoringa(null);
+    resultadoRef.current = false;
+    setZoomResultado(null);
+    resultadoVistoSeqRef.current = 0;
+    pendenciaCoringaRef.current = [];
     resetarJogo();
   }, [resetarJogo]);
 
@@ -522,7 +737,7 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
 
   return (
     <Animated.View style={[styles.container, shakeStyle]}>
-      <Image source={bgImg} style={styles.bg} resizeMode="cover" />
+      <FundoMadeira />
 
       <View style={styles.spotlight} pointerEvents="none" />
 
@@ -569,12 +784,31 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
           totalTurnos={estado.totalTurnos ?? 10}
           fluxoDirecao={estado?.direcaoTurno || 1}
           isHumano={isMinhaVez}
+          duracaoTempo={duracaoTimer}
+          chaveTempo={chaveTimer}
+          tempoAtivo={tempoAtivo}
+          tempoPausado={
+            modalPausa ||
+            jogandoEmAndamento ||
+            !!modalRoubo ||
+            !!destaqueCoringa ||
+            !!zoomResultado
+          }
+          onTempoEsgotar={handleTempoEsgotado}
         />
       </View>
 
       <View style={styles.topCenterWrapper}>
-        <MaoOponente jogador={oponenteIA} hideStatus={false} />
+        <MaoOponente jogador={oponenteIA} hideStatus={false} avatarSource={avatarIaFonte} />
       </View>
+
+      <AreaSegura
+        jogador={oponenteIA}
+        isMinhaVez={false}
+        onJogarCartaArea={() => {}}
+        cartasSelecionadasArea={[]}
+        topo
+      />
 
       <View style={styles.centerDecksWrapper}>
         <DecksArea
@@ -589,7 +823,7 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
           onPressOut={handlePanelPressOut}
           style={styles.painelPressable}
         >
-          <PainelStatus nome={jogadorLocal?.nome || 'JOGADOR'} saldo={jogadorLocal?.saldo ?? 20} corDestaque="#FFD54F" />
+          <PainelStatus nome={jogadorLocal?.nome || 'JOGADOR'} saldo={jogadorLocal?.saldo ?? 20} corDestaque="#FFD54F" avatarSource={avatarJogadorFonte} />
           {panelPressed && (
             <View style={styles.passarOverlay}>
               <Text style={styles.passarTexto}>SOLTAR PARA PASSAR</Text>
@@ -612,13 +846,32 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
       </View>
 
       {isMinhaVez && cartasSelecionadas.length > 0 && (
-        <Pressable
-          style={styles.botaoJogar}
-          onPress={handleJogarMao}
-        >
-          <Text style={styles.botaoJogarTexto}>JOGAR</Text>
-          <Text style={styles.botaoJogarContador}>{cartasSelecionadas.length}/{MAX_CARTAS_POR_TURNO}</Text>
-        </Pressable>
+        <View style={styles.botoesJogarContainer}>
+          <Pressable
+            style={styles.botaoJogar}
+            onPress={handleJogarMao}
+          >
+            <Text style={styles.botaoJogarTexto}>JOGAR</Text>
+            <Text style={styles.botaoJogarContador}>{cartasSelecionadas.length}/{MAX_CARTAS_POR_TURNO}</Text>
+          </Pressable>
+          <Pressable
+            style={styles.botaoGuardar}
+            onPress={handleColocarAreaSegura}
+          >
+            <Text style={styles.botaoJogarTexto}>GUARDAR</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {areaSeguraVisivel && (
+        <AreaSegura
+          jogador={jogadorLocal}
+          isMinhaVez={isMinhaVez}
+          proprio
+          onJogarCartaArea={handleJogarAreaSegura}
+          cartasSelecionadasArea={areaSeguraSelecionadas}
+          onZoomCarta={(carta) => setCartaZoom(carta)}
+        />
       )}
 
       {/* Cartas voando pro descarte (jogador humano ou IA) */}
@@ -686,6 +939,12 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
       {!estado.batalhaIniciada && (
         <AnimacaoInicioBatalha
           jogadorAtivoIndex={estado.jogadorAtivoIndex}
+          jogadores={(estado.jogadores || []).map((j, i) => ({
+            nome: j.nome || `JOGADOR ${i + 1}`,
+            avatarSource: j.id === jogadorLocal?.id ? avatarJogadorFonte : avatarIaFonte,
+            emoji: j.isIA ? '🤖' : '👤',
+            cor: j.cor,
+          }))}
           nomeJogador={jogadorLocal?.nome || 'JOGADOR'}
           nomeOponente={oponenteIA?.nome || 'OPONENTE'}
           onCompleto={handleAnimacaoInicioCompleta}
@@ -697,6 +956,23 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
         visivel={!!cartaZoom}
         onFechar={() => setCartaZoom(null)}
       />
+
+      <ModalRouboCego
+        visivel={!!modalRoubo}
+        alvos={modalRoubo?.alvos || []}
+        quantidade={modalRoubo?.quantidade || 2}
+        traseiraImg={traseiraImg}
+        onConfirmar={confirmarRouboCego}
+        onCancelar={cancelarRouboCego}
+      />
+
+      <DestaqueCoringa
+        carta={destaqueCoringa?.carta || null}
+        sucesso={destaqueCoringa ? destaqueCoringa.sucesso : null}
+        onFim={fecharDestaque}
+      />
+
+      <ResultadoJogada entradas={zoomResultado} onFim={fecharZoomResultado} />
 
       <ParticleBurst
         x={particlesData.x}
@@ -714,11 +990,11 @@ function ArenaInterna({ onVoltar, multiplayerConfig }) {
   );
 }
 
-export default function ArenaCombate({ onVoltar, multiplayerConfig }) {
+export default function ArenaCombate({ onVoltar, multiplayerConfig, perfil }) {
   return (
-    <GameProvider>
+    <GameProvider nomeJogador={perfil?.nickName || 'JOGADOR_1'}>
       <View style={styles.container}>
-        <ArenaInterna onVoltar={onVoltar} multiplayerConfig={multiplayerConfig} />
+        <ArenaInterna onVoltar={onVoltar} multiplayerConfig={multiplayerConfig} perfil={perfil} />
       </View>
     </GameProvider>
   );
@@ -728,11 +1004,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0A0A1A',
-  },
-  bg: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
   },
   spotlight: {
     position: 'absolute',
@@ -759,7 +1030,7 @@ const styles = StyleSheet.create({
   },
   centerDecksWrapper: {
     position: 'absolute',
-    top: SCREEN_HEIGHT * 0.44,
+    top: '38%',
     width: '100%',
     alignItems: 'center',
     zIndex: 10,
@@ -768,7 +1039,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 12,
     alignSelf: 'center',
-    zIndex: 20,
+    zIndex: 26,
   },
   painelPressable: {
     position: 'relative',
@@ -860,25 +1131,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
     overflow: 'hidden',
   },
-  botaoJogar: {
+  botoesJogarContainer: {
     position: 'absolute',
     bottom: 20,
     left: 12,
-    backgroundColor: '#2E7D32',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
     zIndex: 30,
     elevation: 6,
+  },
+  botaoJogar: {
+    backgroundColor: '#2E7D32',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#66BB6A',
+  },
+  botaoGuardar: {
+    backgroundColor: '#1565C0',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#42A5F5',
   },
   botaoJogarTexto: {
     color: '#FFF',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 12,
     letterSpacing: 1,
   },
   botaoJogarContador: {

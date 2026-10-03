@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet } from 'react-native';
+import Text from '../Texto';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -12,7 +13,7 @@ import ScoreRoll from './ScoreRoll';
 
 const CANTO_SIZE = 6;
 
-export default function PainelStatus({ nome, saldo, corDestaque = '#D4AF6A' }) {
+export default function PainelStatus({ nome, saldo, corDestaque = '#D4AF6A', avatarSource }) {
   const scaleAnim = useSharedValue(1);
   const shakeX = useSharedValue(0);
   const prevSaldo = useRef(saldo);
@@ -46,7 +47,11 @@ export default function PainelStatus({ nome, saldo, corDestaque = '#D4AF6A' }) {
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
       <View style={[styles.avatarBox, { borderColor: corDestaque }]}>
-        <Text style={styles.avatarEmoji}>👨‍💼</Text>
+        {avatarSource ? (
+          <Image source={avatarSource} style={styles.avatarImg} resizeMode="cover" />
+        ) : (
+          <Text style={styles.avatarEmoji}>👨‍💼</Text>
+        )}
       </View>
 
       <View style={styles.infoColuna}>
@@ -88,6 +93,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#1C2238',
     marginRight: 6,
+    overflow: 'hidden',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
   },
   avatarEmoji: {
     fontSize: 14,

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, Pressable } from 'react-native';
+import { View, StyleSheet, Image, Dimensions, Pressable } from 'react-native';
+import Text from '../Texto';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -18,22 +19,12 @@ import DecksArea from './DecksArea';
 import PainelStatus from './PainelStatus';
 import CartaZoomModal from './CartaZoomModal';
 import { soundManager } from '../../utils/sound';
+import { artePorCarta } from '../../cards/arteCarta';
 
-const bgImg = require('../../assets/sprites/background.jpg');
+const bgImg = require('../../assets/sprites/batalha/background.jpg');
 const traseiraImg = require('../../assets/cards/traseira_cartas.jpg');
-const nossoImg = require('../../assets/cards/nosso.png');
-const toyotinhoImg = require('../../assets/cards/toyotinho.png');
 
-const cardImages = {
-  ATAQUE:   nossoImg,
-  DEFESA:   toyotinhoImg,
-  PROTECAO: nossoImg,
-  CORINGA:  nossoImg,
-  ACAO:     toyotinhoImg,
-  EFEITO:   nossoImg,
-};
-
-const imgPorCarta = (c) => (c && cardImages[c.tipo]) || traseiraImg;
+const imgPorCarta = (c) => artePorCarta(c) || traseiraImg;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('screen');
 
@@ -191,8 +182,8 @@ function ArenaInterna() {
   const jogadoresDesabilitado = !isMinhaVez;
 
   const nomeJogadorAtivo = isMinhaVez
-    ? (jogadorLocal?.nome || 'JOGADOR_HUMANO')
-    : (oponenteIA?.nome || 'OPONENTE_IA');
+    ? (jogadorLocal?.nome || 'JOGADOR_1')
+    : (oponenteIA?.nome || 'Adam Smith');
 
   const handleToggleSelectCarta = useCallback((carta) => {
     if (!isMinhaVez) return;
@@ -311,7 +302,7 @@ function ArenaInterna() {
           onPressOut={handlePanelPressOut}
           style={styles.painelPressable}
         >
-          <PainelStatus nome={jogadorLocal?.nome || 'JOGADOR_HUMANO'} saldo={jogadorLocal?.saldo ?? 20} corDestaque="#FFD54F" />
+          <PainelStatus nome={jogadorLocal?.nome || 'JOGADOR_1'} saldo={jogadorLocal?.saldo ?? 20} corDestaque="#FFD54F" />
           {panelPressed && (
             <View style={styles.passarOverlay}>
               <Text style={styles.passarTexto}>SOLTAR PARA PASSAR</Text>

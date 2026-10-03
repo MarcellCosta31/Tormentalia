@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
+import Text from '../components/Texto';
 import { GameServer } from '../multiplayer/TCPServer';
 import { GameClient } from '../multiplayer/TCPClient';
 import { MSG } from '../multiplayer/Protocol';

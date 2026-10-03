@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
+import Text from '../Texto';
 
 export default function LogCombate({ log }) {
   const scrollRef = useRef(null);

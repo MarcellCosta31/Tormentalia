@@ -1,27 +1,20 @@
 import React from 'react';
 import { View, StyleSheet, Image } from 'react-native';
-
-const nossoImg = require('../../assets/cards/nosso.png');
-const toyotinhoImg = require('../../assets/cards/toyotinho.png');
-const traseiraImg = require('../../assets/cards/traseira_cartas.jpg');
-
-const cardImages = {
-  0: nossoImg,
-  1: toyotinhoImg,
-};
+import { artePorCarta, TRASEIRA, temArte } from '../../cards/arteCarta';
+import { CartaFaceMini } from './CartaFace';
 
 const BORDER_COLORS = ['#2196F3', '#E53935', '#FFB300', '#4CAF50', '#00ACC1', '#9C27B0'];
 
-export default function CartaArena({ carta, onPress, selecionada, desabilitada, oculta }) {
+export default function CartaArena({ carta, onPress, selecionada, desabilitada, oculta, largura, altura }) {
   if (oculta || !carta) {
     return (
-      <View style={[styles.carta, styles.cartaOculta]}>
-        <Image source={traseiraImg} style={styles.cartaImgOculta} resizeMode="cover" />
+      <View style={[styles.carta, styles.cartaOculta, largura && { width: largura }, altura && { height: altura }]}>
+        <Image source={TRASEIRA} style={styles.cartaImgOculta} resizeMode="cover" />
       </View>
     );
   }
 
-  const imgSource = cardImages[carta.uid % 2];
+  const imgSource = artePorCarta(carta);
   const colorIndex = Math.abs(carta.uid || 0) % BORDER_COLORS.length;
   const borderColor = BORDER_COLORS[colorIndex];
 
@@ -32,15 +25,21 @@ export default function CartaArena({ carta, onPress, selecionada, desabilitada, 
         { borderColor },
         selecionada && styles.cartaSelecionada,
         desabilitada && styles.cartaDesabilitada,
+        largura && { width: largura },
+        altura && { height: altura },
+        largura && { marginHorizontal: 0 },
+        altura && { marginVertical: 0 },
       ]}
       onTouchEnd={() => {
         if (!desabilitada && onPress) onPress(carta);
       }}
     >
-      {/* Moldura de borda branca interna */}
       <View style={styles.innerBorder}>
-        {/* Imagem da carta */}
-        <Image source={imgSource} style={styles.cartaImg} resizeMode="cover" />
+        {temArte(carta) ? (
+          <Image source={imgSource} style={styles.cartaImg} resizeMode="cover" />
+        ) : (
+          <CartaFaceMini carta={carta} style={styles.cartaImg} />
+        )}
       </View>
     </View>
   );

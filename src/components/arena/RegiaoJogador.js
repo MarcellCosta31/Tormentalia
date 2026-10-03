@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import Text from '../Texto';
 import CartaArena from './CartaArena';
 
 export default function RegiaoJogador({ jogador, cartaSelecionada, onSelecionarCarta, onJogarCarta, onDescartar, modoDescarte, desabilitado }) {

@@ -209,30 +209,57 @@ class SoundManager {
     }
   }
 
-  playFlip() {
-    try {
-      if (!this.ensureCtx()) return;
+playFlip() {
+     try {
+       if (!this.ensureCtx()) return;
 
-      const master = this._createMasterGain();
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
+       const master = this._createMasterGain();
+       const osc = this.ctx.createOscillator();
+       const gain = this.ctx.createGain();
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(800, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.15);
+       osc.type = 'sine';
+       osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+       osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.15);
 
-      gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+       gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+       gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
 
-      osc.connect(gain);
-      gain.connect(master);
+       osc.connect(gain);
+       gain.connect(master);
 
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.15);
-    } catch (e) {
-      // Audio fallback
-    }
-  }
+       osc.start();
+       osc.stop(this.ctx.currentTime + 0.15);
+     } catch (e) {
+       // Audio fallback
+     }
+   }
+
+   playDiceRoll() {
+     try {
+       if (!this.ensureCtx()) return;
+
+       const master = this._createMasterGain();
+       const osc = this.ctx.createOscillator();
+       const gain = this.ctx.createGain();
+
+       osc.type = 'triangle';
+       osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+       osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.6);
+       osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.7);
+       osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.9);
+
+       gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+       gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.9);
+
+       osc.connect(gain);
+       gain.connect(master);
+
+       osc.start();
+       osc.stop(this.ctx.currentTime + 0.9);
+     } catch (e) {
+       // Audio fallback
+     }
+   }
 
   playScoreGain() {
     try {

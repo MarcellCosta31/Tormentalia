@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Texto';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -124,12 +125,10 @@ const styles = StyleSheet.create({
   digit: {
     fontSize: 9,
     fontWeight: 'bold',
-    fontFamily: 'monospace',
   },
   valor: {
     fontSize: 9,
     fontWeight: 'bold',
-    fontFamily: 'monospace',
   },
   moeda: {
     fontSize: 8,

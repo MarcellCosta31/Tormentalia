@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Alert } from 'react-native';
 import * as NavigationBar from 'expo-navigation-bar';
+import { useFonts } from 'expo-font';
 import TelaIntro from './src/screens/TelaIntro';
 import TelaLogo from './src/screens/TelaLogo';
 import TelaInicial from './src/screens/TelaInicial';
+import TelaUmJogador from './src/screens/TelaUmJogador';
+import TelaTutorial from './src/screens/TelaTutorial';
 import TelaPerfil from './src/screens/TelaPerfil';
 import TelaLobby from './src/screens/TelaLobby';
 import TelaSala from './src/screens/TelaSala';
@@ -19,6 +22,10 @@ export default function App() {
   const [multiplayerConfig, setMultiplayerConfig] = useState(null);
   const [salaInfo, setSalaInfo] = useState(null);
   const [arenaQuantidade, setArenaQuantidade] = useState(2);
+
+  const [fontesCarregadas] = useFonts({
+    'VCR_OSD_MONO_1.001': require('./src/fonts/VCR_OSD_MONO_1.001.ttf'),
+  });
 
   useEffect(() => {
     try {
@@ -42,6 +49,13 @@ export default function App() {
 
   const iniciarJogo = () => {
     setTelaAtual('arena');
+  };
+
+  // Menu → tela de escolha do oponente (modo um jogador).
+  const abrirUmJogador = () => {
+    setMultiplayerConfig(null);
+    setSalaInfo(null);
+    setTelaAtual('umJogador');
   };
 
   const iniciarMultiplayer = (config) => {
@@ -86,7 +100,7 @@ export default function App() {
     );
   };
 
-  if (!perfilCarregado) {
+  if (!fontesCarregadas || !perfilCarregado) {
     return null;
   }
 
@@ -101,7 +115,7 @@ export default function App() {
       )}
       {telaAtual === 'inicial' && (
         <TelaInicial
-          onIniciarJogo={iniciarJogo}
+          onIniciarJogo={abrirUmJogador}
           onMultiplayer={() => setTelaAtual('lobby')}
           onConfiguracoes={() => Alert.alert('Configurações', 'Em breve!')}
           onSobre={() => Alert.alert('Sobre', 'O Caro Deus Mercado v1.0')}
@@ -109,6 +123,25 @@ export default function App() {
           onPerfil={() => setTelaAtual('perfil')}
           perfil={perfil}
           onArena={iniciarArenaMultiplayer}
+          onTutorial={() => setTelaAtual('tutorial')}
+        />
+      )}
+      {telaAtual === 'tutorial' && (
+        <TelaTutorial
+          onVoltar={() => setTelaAtual('inicial')}
+          onIniciarBatalha={() => {
+            setMultiplayerConfig(null);
+            setSalaInfo(null);
+            setTelaAtual('arena');
+          }}
+          perfil={perfil}
+          onSalvarPerfil={handleSalvarPerfil}
+        />
+      )}
+      {telaAtual === 'umJogador' && (
+        <TelaUmJogador
+          onVoltar={() => setTelaAtual('inicial')}
+          onIniciar={iniciarJogo}
         />
       )}
       {telaAtual === 'perfil' && (
@@ -147,6 +180,7 @@ export default function App() {
   <ArenaCombate
     onVoltar={voltarParaInicial}
     multiplayerConfig={null}
+    perfil={perfil}
   />
 )}
       {telaAtual === 'arenaMulti' && (

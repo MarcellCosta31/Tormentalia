@@ -1,17 +1,12 @@
 import React, { useCallback } from 'react';
 import { View, StyleSheet, Image } from 'react-native';
+import { artePorCarta, TRASEIRA, temArte } from '../../cards/arteCarta';
+import { CartaFaceMini } from './CartaFace';
 
-const traseiraImg = require('../../assets/cards/traseira_cartas.jpg');
-const nossoImg = require('../../assets/cards/nosso.png');
-const toyotinhoImg = require('../../assets/cards/toyotinho.png');
-
-const cardImages = {
-  0: nossoImg,
-  1: toyotinhoImg,
-};
-
-const DECK_WIDTH = 58;
-const DECK_HEIGHT = 81;
+const DRAW_W = 50;
+const DRAW_H = 70;
+const DESC_W = 64;
+const DESC_H = 90;
 
 export default function DecksArea({ baralho, pilhaDescarte, onLayout }) {
   const qtdBaralho = baralho?.length || 0;
@@ -35,33 +30,42 @@ export default function DecksArea({ baralho, pilhaDescarte, onLayout }) {
     }
   }, [onLayout]);
 
+  const cartaTopoDescarte = qtdDescarte > 0 ? pilhaDescarte[qtdDescarte - 1] : null;
+
   return (
     <View style={styles.container}>
       {/* Baralho de compra (Left Deck) */}
       <View style={styles.deckGroup} onLayout={handleDrawLayout}>
-        <View style={styles.deckPile}>
-          {qtdBaralho > 2 && <Image source={traseiraImg} style={[styles.cardStack, styles.stack3]} resizeMode="cover" />}
-          {qtdBaralho > 1 && <Image source={traseiraImg} style={[styles.cardStack, styles.stack2]} resizeMode="cover" />}
-          {qtdBaralho > 0 && <Image source={traseiraImg} style={[styles.cardStack, styles.stack1]} resizeMode="cover" />}
-          {qtdBaralho === 0 && <View style={[styles.cardStack, styles.stack1, styles.deckVazio]} />}
+        <View style={[styles.deckPile, styles.drawPile]}>
+          {qtdBaralho > 2 && <Image source={TRASEIRA} style={[styles.cardStack, styles.drawStack, styles.stack3]} resizeMode="cover" />}
+          {qtdBaralho > 1 && <Image source={TRASEIRA} style={[styles.cardStack, styles.drawStack, styles.stack2]} resizeMode="cover" />}
+          {qtdBaralho > 0 && <Image source={TRASEIRA} style={[styles.cardStack, styles.drawStack, styles.stack1]} resizeMode="cover" />}
+          {qtdBaralho === 0 && <View style={[styles.cardStack, styles.drawStack, styles.stack1, styles.deckVazio]} />}
         </View>
       </View>
 
       {/* Pilha de Descarte (Right Deck) */}
       <View style={styles.deckGroup} onLayout={handleDescarteLayout}>
-        <View style={styles.deckPile}>
-          {qtdDescarte > 0 ? (
+        <View style={[styles.deckPile, styles.descPile]}>
+          {cartaTopoDescarte ? (
             <>
-              {qtdDescarte > 2 && <Image source={traseiraImg} style={[styles.cardStack, styles.stack3]} resizeMode="cover" />}
-              {qtdDescarte > 1 && <Image source={traseiraImg} style={[styles.cardStack, styles.stack2]} resizeMode="cover" />}
-              <Image
-                source={cardImages[pilhaDescarte[pilhaDescarte.length - 1].uid % 2]}
-                style={[styles.cardStack, styles.stack1]}
-                resizeMode="cover"
-              />
+              {qtdDescarte > 2 && <Image source={TRASEIRA} style={[styles.cardStack, styles.descStack, styles.stack3]} resizeMode="cover" />}
+              {qtdDescarte > 1 && <Image source={TRASEIRA} style={[styles.cardStack, styles.descStack, styles.stack2]} resizeMode="cover" />}
+              {temArte(cartaTopoDescarte) ? (
+                <Image
+                  source={artePorCarta(cartaTopoDescarte)}
+                  style={[styles.cardStack, styles.descStack, styles.stack1]}
+                  resizeMode="cover"
+                />
+              ) : (
+                <CartaFaceMini
+                  carta={cartaTopoDescarte}
+                  style={[styles.cardStack, styles.descStack, styles.stack1]}
+                />
+              )}
             </>
           ) : (
-            <View style={[styles.cardStack, styles.stack1, styles.deckVazio]} />
+            <View style={[styles.cardStack, styles.descStack, styles.stack1, styles.deckVazio]} />
           )}
         </View>
       </View>
@@ -81,18 +85,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deckPile: {
-    width: DECK_WIDTH,
-    height: DECK_HEIGHT,
     position: 'relative',
     justifyContent: 'center',
   },
+  drawPile: {
+    width: DRAW_W,
+    height: DRAW_H,
+  },
+  descPile: {
+    width: DESC_W,
+    height: DESC_H,
+  },
   cardStack: {
-    width: DECK_WIDTH,
-    height: DECK_HEIGHT,
-    borderRadius: 6,
     position: 'absolute',
+    borderRadius: 6,
     borderWidth: 1.5,
     borderColor: '#FAD02C',
+  },
+  drawStack: {
+    width: DRAW_W,
+    height: DRAW_H,
+  },
+  descStack: {
+    width: DESC_W,
+    height: DESC_H,
   },
   stack1: {
     top: 0,

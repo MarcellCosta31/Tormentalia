@@ -1,8 +1,15 @@
-import { gerarBaralhoCompleto, embaralharBaralho, comprarCarta as comprarCartaBaralho } from '../cards/baralhoCartas';
-import { TIPO_CARTA } from '../cards/baralhoCartas';
+import {
+  gerarBaralhoCompleto,
+  embaralharBaralho,
+  comprarCarta as comprarCartaBaralho,
+} from '../cards/baralhoCartas';
+import {
+  executarCarta,
+  processarInicioTurno,
+  aplicarSaldo,
+  SALDO_INICIAL,
+} from '../cards/motorEfeitos';
 
-const SALDO_INICIAL = 20;
-const SALDO_EMERGENCIA = 5;
 const MAX_TURNOS = 10;
 const CARTAS_POR_MAO = 7;
 
@@ -11,51 +18,24 @@ function criarJogador(id, nome, isIA, avatar) {
     id,
     nome,
     isIA,
-    avatar: avatar ?? null,   // <- novo
+    avatar: avatar ?? null,
     saldo: SALDO_INICIAL,
     usouFundoEmergencia: false,
     mao: [],
+    areaSegura: [],
     falido: false,
     protegido: false,
+    protegeContra: null,
+    efeitos: [],
   };
 }
 
-function verificarFundoEmergencia(jogador) {
-  if (jogador.saldo <= 0 && !jogador.usouFundoEmergencia) {
-    return { ...jogador, saldo: SALDO_EMERGENCIA, usouFundoEmergencia: true };
-  }
-  return jogador;
-}
-
-function verificarFalencia(jogador) {
-  if (jogador.saldo <= 0 && jogador.usouFundoEmergencia) {
-    return { ...jogador, falido: true };
-  }
-  return jogador;
-}
-
+// Eventos do Deus Mercado (escala 1000, equivalentes a +2/-2/+1/-3 no
+// jogo original de saldo 20).
 function aplicarEventoDeusMercado(jogadores) {
-  const evento = Math.floor(Math.random() * 4);
-  return jogadores.map((j) => {
-    if (j.falido) return j;
-    let novoSaldo = j.saldo;
-    switch (evento) {
-      case 0:
-        novoSaldo += 2;
-        break;
-      case 1:
-        novoSaldo -= 2;
-        break;
-      case 2:
-        novoSaldo += 1;
-        break;
-      case 3:
-        novoSaldo -= 3;
-        break;
-    }
-    const atualizado = { ...j, saldo: novoSaldo };
-    return verificarFalencia(verificarFundoEmergencia(atualizado));
-  });
+  const deltas = [20, -20, 10, -30];
+  const delta = deltas[Math.floor(Math.random() * deltas.length)];
+  return jogadores.map((j) => (j.falido ? j : aplicarSaldo(j, delta)));
 }
 
 function verificarVitoria(jogadores, turnoAtual) {
@@ -75,11 +55,118 @@ function verificarVitoria(jogadores, turnoAtual) {
   return null;
 }
 
-export function criarEstadoInicial() {
+// ============================================================
+// NUCLEO DE JOGADA (compartilhado por todas as variantes)
+// ============================================================
+
+function removerCarta(estado, idxJogador, cartaUid, fonte) {
+  const jogador = { ...estado.jogadores[idxJogador] };
+  const lista = fonte === 'areaSegura' ? [...jogador.areaSegura] : [...jogador.mao];
+  const idx = lista.findIndex((c) => c.uid === cartaUid);
+  if (idx === -1) return null;
+
+  const carta = lista[idx];
+  lista.splice(idx, 1);
+
+  const atualizado =
+    fonte === 'areaSegura'
+      ? { ...jogador, areaSegura: lista }
+      : { ...jogador, mao: lista };
+
+  const jogadores = [...estado.jogadores];
+  jogadores[idxJogador] = atualizado;
+
+  return {
+    estado: { ...estado, jogadores, pilhaDescarte: [...estado.pilhaDescarte, carta] },
+    carta,
+  };
+}
+
+function comprarPara(estado, idxJogador, quantidade) {
+  const jogador = { ...estado.jogadores[idxJogador] };
+  const resultado = comprarCartaBaralho(estado.baralho, jogador.mao, quantidade);
+  const jogadores = [...estado.jogadores];
+  jogadores[idxJogador] = { ...jogador, mao: resultado.mao };
+  return { ...estado, jogadores, baralho: resultado.baralho };
+}
+
+function jogarInterno(
+  estado,
+  { idxJogador, cartaUid, idxAlvo, fonte = 'mao', comprar = 0, origem = '', roubarUids = null }
+) {
+  if (idxJogador < 0 || idxJogador >= estado.jogadores.length) return estado;
+
+  const preparado = removerCarta(estado, idxJogador, cartaUid, fonte);
+  if (!preparado) return estado;
+
+  const { estado: posRemocao, carta } = preparado;
+  const { estado: posExecucao, logEntrada, resultado } = executarCarta(posRemocao, {
+    idxJogador,
+    idxAlvo,
+    carta,
+    origem,
+    roubarUids,
+  });
+
+  let novo = { ...posExecucao, log: [...posExecucao.log, logEntrada] };
+  // Registra o resultado (sucesso/falha) para a UI do zoom. Mantem so as
+  // ultimas 12 entradas; o seq monotonic evita reexibir em re-sync do MP.
+  if (resultado) {
+    const anteriores = novo.ultimasJogadas || [];
+    const ultimoSeq = anteriores.length ? anteriores[anteriores.length - 1].seq : 0;
+    novo = {
+      ...novo,
+      ultimasJogadas: [...anteriores, { seq: ultimoSeq + 1, ...resultado }].slice(-12),
+    };
+  }
+  if (comprar > 0) novo = comprarPara(novo, idxJogador, comprar);
+  return novo;
+}
+
+function idxAlvoOposto(idxJogador) {
+  return idxJogador === 0 ? 1 : 0;
+}
+
+function encontrarAlvoAleatorio(jogadores, idxJogador) {
+  const vivos = jogadores
+    .map((j, i) => ({ ...j, idx: i }))
+    .filter((j) => !j.falido && j.idx !== idxJogador);
+  if (vivos.length === 0) return idxJogador;
+  return vivos[Math.floor(Math.random() * vivos.length)].idx;
+}
+
+function resolverAlvoN(jogadores, idxJogador, alvoIdx, precisaAlvo) {
+  if (!precisaAlvo) return undefined;
+  if (
+    alvoIdx !== undefined &&
+    alvoIdx !== null &&
+    alvoIdx >= 0 &&
+    !jogadores[alvoIdx]?.falido &&
+    alvoIdx !== idxJogador
+  ) {
+    return alvoIdx;
+  }
+  return encontrarAlvoAleatorio(jogadores, idxJogador);
+}
+
+function resolverAlvo1v1(jogadores, idxJogador, jogadorAlvoId, precisaAlvo) {
+  if (!precisaAlvo) return undefined;
+  if (jogadorAlvoId) {
+    const idx = jogadores.findIndex((j) => j.id === jogadorAlvoId);
+    if (idx !== -1) return idx;
+  }
+  return idxAlvoOposto(idxJogador);
+}
+
+// ============================================================
+// ESTADO INICIAL
+// ============================================================
+
+export function criarEstadoInicial(nomeJogadorHumano) {
   const baralhoEmbaralhado = embaralharBaralho(gerarBaralhoCompleto());
 
-  const jogadorLocal = criarJogador(1, 'JOGADOR_HUMANO', false);
-  const oponenteIA = criarJogador(2, 'OPONENTE_IA', true);
+  const jogadorLocal = criarJogador(1, nomeJogadorHumano || 'JOGADOR_1', false);
+  const oponenteIA = criarJogador(2, 'Adam Smith', true);
 
   const resultadoCompra1 = comprarCartaBaralho(baralhoEmbaralhado, jogadorLocal.mao, CARTAS_POR_MAO);
   const resultadoCompra2 = comprarCartaBaralho(resultadoCompra1.baralho, oponenteIA.mao, CARTAS_POR_MAO);
@@ -93,6 +180,7 @@ export function criarEstadoInicial() {
     direcaoTurno: 1,
     baralho: resultadoCompra2.baralho,
     pilhaDescarte: [],
+    ultimasJogadas: [],
     jogadores: [
       { ...jogadorLocal, mao: resultadoCompra1.mao },
       { ...oponenteIA, mao: resultadoCompra2.mao },
@@ -131,6 +219,7 @@ export function criarEstadoMultiplayer(nomeJogador1, nomeJogador2, primeiroJogad
     direcaoTurno: 1,
     baralho: resultadoCompra2.baralho,
     pilhaDescarte: [],
+    ultimasJogadas: [],
     jogadores: [
       { ...jogador1, mao: resultadoCompra1.mao },
       { ...jogador2, mao: resultadoCompra2.mao },
@@ -142,205 +231,66 @@ export function criarEstadoMultiplayer(nomeJogador1, nomeJogador2, primeiroJogad
   };
 }
 
-export function jogarCartaSemComprar(estado, jogadorId, cartaUid, jogadorAlvoId) {
-  const novoEstado = { ...estado };
-  const idxJogador = novoEstado.jogadores.findIndex((j) => j.id === jogadorId);
-  if (idxJogador === -1) return novoEstado;
+// ============================================================
+// 1v1 (joga + compra 1 carta)
+// ============================================================
 
-  const jogador = { ...novoEstado.jogadores[idxJogador] };
-  const idxCarta = jogador.mao.findIndex((c) => c.uid === cartaUid);
-  if (idxCarta === -1) return novoEstado;
+export function jogarCarta(estado, jogadorId, cartaUid, jogadorAlvoId, roubarUids = null) {
+  const idxJogador = estado.jogadores.findIndex((j) => j.id === jogadorId);
+  if (idxJogador === -1) return estado;
 
-  const carta = jogador.mao[idxCarta];
-  const novaMao = [...jogador.mao];
-  novaMao.splice(idxCarta, 1);
-  jogador.mao = novaMao;
+  const carta = estado.jogadores[idxJogador].mao.find((c) => c.uid === cartaUid);
+  if (!carta) return estado;
 
-  const novaPilhaDescarte = [...novoEstado.pilhaDescarte, carta];
-  const novosJogadores = [...novoEstado.jogadores];
+  const idxAlvo = resolverAlvo1v1(
+    estado.jogadores,
+    idxJogador,
+    jogadorAlvoId,
+    carta.precisaAlvo
+  );
 
-  if (carta.tipo === TIPO_CARTA.PROTECAO) {
-    jogador.protegido = true;
-    novosJogadores[idxJogador] = jogador;
-    return {
-      ...novoEstado,
-      jogadores: novosJogadores,
-      pilhaDescarte: novaPilhaDescarte,
-      log: [...novoEstado.log, `${jogador.nome} ativou protecao: ${carta.titulo}`],
-    };
-  }
+  return jogarInterno(estado, { idxJogador, cartaUid, idxAlvo, comprar: 1, roubarUids });
+}
 
-  const sucesso = Math.random() < carta.chanceSucesso;
-  let alteracao = 0;
-  let logEntrada = '';
+// 1v1 sem comprar (a compra acontece no fim do turno).
+export function jogarCartaSemComprar(
+  estado,
+  jogadorId,
+  cartaUid,
+  jogadorAlvoId,
+  roubarUids = null
+) {
+  const idxJogador = estado.jogadores.findIndex((j) => j.id === jogadorId);
+  if (idxJogador === -1) return estado;
 
-  const idxAlvo = jogadorAlvoId
-    ? novosJogadores.findIndex((j) => j.id === jogadorAlvoId)
-    : idxJogador === 0
-    ? 1
-    : 0;
+  const carta = estado.jogadores[idxJogador].mao.find((c) => c.uid === cartaUid);
+  if (!carta) return estado;
 
-  if (sucesso) {
-    alteracao = carta.alteracaoSaldoBase;
-    logEntrada = `${jogador.nome} jogou ${carta.titulo} com SUCESSO! (${carta.alteracaoSaldoBase > 0 ? '+' : ''}${carta.alteracaoSaldoBase})`;
-  } else {
-    alteracao = carta.alteracaoSaldoFalha;
-    logEntrada = `${jogador.nome} jogou ${carta.titulo} e FALHOU! (${carta.alteracaoSaldoFalha > 0 ? '+' : ''}${carta.alteracaoSaldoFalha})`;
-  }
+  const idxAlvo = resolverAlvo1v1(
+    estado.jogadores,
+    idxJogador,
+    jogadorAlvoId,
+    carta.precisaAlvo
+  );
 
-  if (carta.precisaAlvo && idxAlvo !== idxJogador) {
-    const alvo = { ...novosJogadores[idxAlvo] };
-    if (alvo.protegido) {
-      alvo.protegido = false;
-      logEntrada += ` (Alvo protegido! Sem efeito)`;
-      alteracao = 0;
-    } else {
-      alvo.saldo += alteracao;
-      novosJogadores[idxAlvo] = verificarFalencia(verificarFundoEmergencia(alvo));
-    }
-  } else {
-    if (jogador.protegido && alteracao < 0) {
-      jogador.protegido = false;
-      logEntrada += ` (Protegido! Sem perda)`;
-      alteracao = 0;
-    } else {
-      jogador.saldo += alteracao;
-    }
-  }
-
-  novosJogadores[idxJogador] = verificarFalencia(verificarFundoEmergencia(jogador));
-
-  return {
-    ...novoEstado,
-    jogadores: novosJogadores,
-    pilhaDescarte: novaPilhaDescarte,
-    log: [...novoEstado.log, logEntrada],
-  };
+  return jogarInterno(estado, { idxJogador, cartaUid, idxAlvo, comprar: 0, roubarUids });
 }
 
 export function comprarCartaJogador(estado, jogadorId) {
-  const novoEstado = { ...estado };
-  const idxJogador = novoEstado.jogadores.findIndex((j) => j.id === jogadorId);
-  if (idxJogador === -1) return novoEstado;
-
-  const jogador = { ...novoEstado.jogadores[idxJogador] };
-  const resultado = comprarCartaBaralho(novoEstado.baralho, jogador.mao, 1);
-  jogador.mao = resultado.mao;
-  novoEstado.baralho = resultado.baralho;
-
-  const novosJogadores = [...novoEstado.jogadores];
-  novosJogadores[idxJogador] = jogador;
-
-  return {
-    ...novoEstado,
-    jogadores: novosJogadores,
-  };
-}
-
-export function jogarCarta(estado, jogadorId, cartaUid, jogadorAlvoId) {
-  const novoEstado = { ...estado };
-  const idxJogador = novoEstado.jogadores.findIndex((j) => j.id === jogadorId);
-  if (idxJogador === -1) return novoEstado;
-
-  const jogador = { ...novoEstado.jogadores[idxJogador] };
-  const idxCarta = jogador.mao.findIndex((c) => c.uid === cartaUid);
-  if (idxCarta === -1) return novoEstado;
-
-  const carta = jogador.mao[idxCarta];
-  const novaMao = [...jogador.mao];
-  novaMao.splice(idxCarta, 1);
-  jogador.mao = novaMao;
-
-  const novaPilhaDescarte = [...novoEstado.pilhaDescarte, carta];
-  const novosJogadores = [...novoEstado.jogadores];
-
-  if (carta.tipo === TIPO_CARTA.PROTECAO) {
-    jogador.protegido = true;
-    novosJogadores[idxJogador] = jogador;
-    const logEntrada = `${jogador.nome} ativou protecao: ${carta.titulo}`;
-
-    const resultadoCompraProt = comprarCartaBaralho(novoEstado.baralho, jogador.mao, 1);
-    jogador.mao = resultadoCompraProt.mao;
-    novoEstado.baralho = resultadoCompraProt.baralho;
-
-    return {
-      ...novoEstado,
-      jogadores: novosJogadores,
-      pilhaDescarte: novaPilhaDescarte,
-      log: [...novoEstado.log, logEntrada],
-    };
-  }
-
-  const sucesso = Math.random() < carta.chanceSucesso;
-  let alteracao = 0;
-  let logEntrada = '';
-
-  const idxAlvo = jogadorAlvoId
-    ? novosJogadores.findIndex((j) => j.id === jogadorAlvoId)
-    : idxJogador === 0
-    ? 1
-    : 0;
-
-  if (sucesso) {
-    alteracao = carta.alteracaoSaldoBase;
-    logEntrada = `${jogador.nome} jogou ${carta.titulo} com SUCESSO! (${carta.alteracaoSaldoBase > 0 ? '+' : ''}${carta.alteracaoSaldoBase})`;
-  } else {
-    alteracao = carta.alteracaoSaldoFalha;
-    logEntrada = `${jogador.nome} jogou ${carta.titulo} e FALHOU! (${carta.alteracaoSaldoFalha > 0 ? '+' : ''}${carta.alteracaoSaldoFalha})`;
-  }
-
-  if (carta.precisaAlvo && idxAlvo !== idxJogador) {
-    const alvo = { ...novosJogadores[idxAlvo] };
-    if (alvo.protegido) {
-      alvo.protegido = false;
-      logEntrada += ` (Alvo protegido! Sem efeito)`;
-      alteracao = 0;
-    } else {
-      alvo.saldo += alteracao;
-      novosJogadores[idxAlvo] = verificarFalencia(verificarFundoEmergencia(alvo));
-    }
-  } else {
-    if (jogador.protegido && alteracao < 0) {
-      jogador.protegido = false;
-      logEntrada += ` (Protegido! Sem perda)`;
-      alteracao = 0;
-    } else {
-      jogador.saldo += alteracao;
-    }
-  }
-
-  novosJogadores[idxJogador] = verificarFalencia(verificarFundoEmergencia(jogador));
-
-  const resultadoCompra = comprarCartaBaralho(novoEstado.baralho, jogador.mao, 1);
-  jogador.mao = resultadoCompra.mao;
-  novoEstado.baralho = resultadoCompra.baralho;
-
-  return {
-    ...novoEstado,
-    jogadores: novosJogadores,
-    pilhaDescarte: novaPilhaDescarte,
-    log: [...novoEstado.log, logEntrada],
-  };
+  const idxJogador = estado.jogadores.findIndex((j) => j.id === jogadorId);
+  if (idxJogador === -1) return estado;
+  return comprarPara(estado, idxJogador, 1);
 }
 
 export function fimDeTurno(estado) {
   let novoEstado = { ...estado };
   const numJogadores = novoEstado.jogadores.length;
   const idxJogador = novoEstado.jogadorAtivoIndex;
-  const jogador = { ...novoEstado.jogadores[idxJogador] };
 
-  const resultadoCompra = comprarCartaBaralho(novoEstado.baralho, jogador.mao, 1);
-  jogador.mao = resultadoCompra.mao;
-  novoEstado.baralho = resultadoCompra.baralho;
-
-  const novosJogadores = [...novoEstado.jogadores];
-  novosJogadores[idxJogador] = jogador;
-  novoEstado.jogadores = novosJogadores;
-
+  novoEstado = comprarPara(novoEstado, idxJogador, 1);
   novoEstado.jogadores = aplicarEventoDeusMercado(novoEstado.jogadores);
 
-  const logEvento = 'Deus Mercado envia um evento aleatorio...';
-  novoEstado.log = [...novoEstado.log, logEvento];
+  novoEstado.log = [...novoEstado.log, 'Deus Mercado envia um evento aleatorio...'];
 
   // Avanca para o proximo jogador nao-falido (funciona para 2..N jogadores).
   let proximoIdx;
@@ -361,6 +311,9 @@ export function fimDeTurno(estado) {
     novoEstado.turnoAtual += 1;
   }
 
+  // Tick dos efeitos ativos no inicio do turno de `proximoIdx`.
+  novoEstado = processarInicioTurno(novoEstado, proximoIdx);
+
   const vitoria = verificarVitoria(novoEstado.jogadores, novoEstado.turnoAtual);
   if (vitoria) {
     novoEstado.fimDeJogo = vitoria;
@@ -370,32 +323,31 @@ export function fimDeTurno(estado) {
 }
 
 export function descartarCarta(estado, jogadorId, cartaUid) {
-  const novoEstado = { ...estado };
-  const idxJogador = novoEstado.jogadores.findIndex((j) => j.id === jogadorId);
-  if (idxJogador === -1) return novoEstado;
+  const idxJogador = estado.jogadores.findIndex((j) => j.id === jogadorId);
+  if (idxJogador === -1) return estado;
 
-  const jogador = { ...novoEstado.jogadores[idxJogador] };
+  const jogador = { ...estado.jogadores[idxJogador] };
   const idxCarta = jogador.mao.findIndex((c) => c.uid === cartaUid);
-  if (idxCarta === -1) return novoEstado;
+  if (idxCarta === -1) return estado;
 
   const carta = jogador.mao[idxCarta];
   const novaMao = [...jogador.mao];
   novaMao.splice(idxCarta, 1);
   jogador.mao = novaMao;
 
-  const novosJogadores = [...novoEstado.jogadores];
+  const novosJogadores = [...estado.jogadores];
   novosJogadores[idxJogador] = jogador;
 
   return {
-    ...novoEstado,
+    ...estado,
     jogadores: novosJogadores,
-    pilhaDescarte: [...novoEstado.pilhaDescarte, carta],
-    log: [...novoEstado.log, `${jogador.nome} descartou ${carta.titulo}`],
+    pilhaDescarte: [...estado.pilhaDescarte, carta],
+    log: [...estado.log, `${jogador.nome} descartou ${carta.titulo}`],
   };
 }
 
 // ============================================================
-// FUNCOES MULTIPLAYER N JOGADORES (2-8)
+// MULTIPLAYER N JOGADORES (2-8)
 // ============================================================
 
 const PLAYER_COLORS_N = ['#FFD54F', '#EF5350', '#42A5F5', '#66BB6A', '#AB47BC', '#FF7043', '#26C6DA', '#EC407A'];
@@ -403,15 +355,7 @@ const PLAYER_EMOJIS_N = ['👑', '🤖', '🦊', '🐉', '🎭', '🦁', '🌙',
 
 function criarJogadorN(id, nome, isIA, avatar) {
   return {
-    id,
-    nome,
-    isIA,
-    avatar: avatar ?? null,   // <- novo
-    saldo: SALDO_INICIAL,
-    usouFundoEmergencia: false,
-    mao: [],
-    falido: false,
-    protegido: false,
+    ...criarJogador(id, nome, isIA, avatar),
     cor: PLAYER_COLORS_N[id - 1] || '#FFF',
     emoji: PLAYER_EMOJIS_N[id - 1] || '❓',
   };
@@ -441,15 +385,6 @@ function verificarVitoriaN(jogadores, turnoAtual) {
   return null;
 }
 
-function encontrarAlvoAleatorio(jogadores, idxJogador) {
-  const vivos = jogadores
-    .map((j, i) => ({ ...j, idx: i }))
-    .filter((j) => !j.falido && j.idx !== idxJogador);
-  if (vivos.length === 0) return idxJogador;
-  const alvo = vivos[Math.floor(Math.random() * vivos.length)];
-  return alvo.idx;
-}
-
 export function criarEstadoMultiplayerN(nomesJogadores, avatarsJogadores = []) {
   const numJogadores = nomesJogadores.length;
   const baralhoEmbaralhado = embaralharBaralho(gerarBaralhoCompleto());
@@ -473,6 +408,7 @@ export function criarEstadoMultiplayerN(nomesJogadores, avatarsJogadores = []) {
     direcaoTurno,
     baralho: baralhoAtual,
     pilhaDescarte: [],
+    ultimasJogadas: [],
     jogadores,
     fimDeJogo: null,
     log: [],
@@ -482,94 +418,39 @@ export function criarEstadoMultiplayerN(nomesJogadores, avatarsJogadores = []) {
   };
 }
 
-export function jogarCartaN(estado, jogadorIdx, cartaUid, alvoIdx) {
-  const novoEstado = { ...estado };
-  if (jogadorIdx < 0 || jogadorIdx >= novoEstado.jogadores.length) return novoEstado;
+export function jogarCartaN(estado, jogadorIdx, cartaUid, alvoIdx, roubarUids = null) {
+  if (jogadorIdx < 0 || jogadorIdx >= estado.jogadores.length) return estado;
 
-  const jogador = { ...novoEstado.jogadores[jogadorIdx] };
-  const idxCarta = jogador.mao.findIndex((c) => c.uid === cartaUid);
-  if (idxCarta === -1) return novoEstado;
+  const carta = estado.jogadores[jogadorIdx].mao.find((c) => c.uid === cartaUid);
+  if (!carta) return estado;
 
-  const carta = jogador.mao[idxCarta];
-  const novaMao = [...jogador.mao];
-  novaMao.splice(idxCarta, 1);
-  jogador.mao = novaMao;
+  const idxAlvo = resolverAlvoN(estado.jogadores, jogadorIdx, alvoIdx, carta.precisaAlvo);
 
-  const novaPilhaDescarte = [...novoEstado.pilhaDescarte, carta];
-  const novosJogadores = [...novoEstado.jogadores];
+  return jogarInterno(estado, { idxJogador: jogadorIdx, cartaUid, idxAlvo, comprar: 1, roubarUids });
+}
 
-  if (carta.tipo === TIPO_CARTA.PROTECAO) {
-    jogador.protegido = true;
-    novosJogadores[jogadorIdx] = jogador;
-    const logEntrada = `${jogador.nome} ativou protecao: ${carta.titulo}`;
+// Versao N que NAO compra carta ao jogar (a compra e do fimDeTurnoN).
+export function jogarCartaSemComprarN(
+  estado,
+  jogadorIdx,
+  cartaUid,
+  alvoIdx,
+  roubarUids = null
+) {
+  if (jogadorIdx < 0 || jogadorIdx >= estado.jogadores.length) return estado;
 
-    const resultadoCompraProt = comprarCartaBaralho(novoEstado.baralho, jogador.mao, 1);
-    jogador.mao = resultadoCompraProt.mao;
-    novoEstado.baralho = resultadoCompraProt.baralho;
-    novosJogadores[jogadorIdx] = jogador;
+  const carta = estado.jogadores[jogadorIdx].mao.find((c) => c.uid === cartaUid);
+  if (!carta) return estado;
 
-    return {
-      ...novoEstado,
-      jogadores: novosJogadores,
-      pilhaDescarte: novaPilhaDescarte,
-      log: [...novoEstado.log, logEntrada],
-    };
-  }
+  const idxAlvo = resolverAlvoN(estado.jogadores, jogadorIdx, alvoIdx, carta.precisaAlvo);
 
-  const sucesso = Math.random() < carta.chanceSucesso;
-  let alteracao = 0;
-  let logEntrada = '';
-
-  let idxAlvo;
-  if (carta.precisaAlvo) {
-    if (alvoIdx !== undefined && alvoIdx !== null && alvoIdx >= 0 && !novosJogadores[alvoIdx]?.falido && alvoIdx !== jogadorIdx) {
-      idxAlvo = alvoIdx;
-    } else {
-      idxAlvo = encontrarAlvoAleatorio(novosJogadores, jogadorIdx);
-    }
-  }
-
-  if (sucesso) {
-    alteracao = carta.alteracaoSaldoBase;
-    logEntrada = `${jogador.nome} jogou ${carta.titulo} com SUCESSO! (${carta.alteracaoSaldoBase > 0 ? '+' : ''}${carta.alteracaoSaldoBase})`;
-  } else {
-    alteracao = carta.alteracaoSaldoFalha;
-    logEntrada = `${jogador.nome} jogou ${carta.titulo} e FALHOU! (${carta.alteracaoSaldoFalha > 0 ? '+' : ''}${carta.alteracaoSaldoFalha})`;
-  }
-
-  if (carta.precisaAlvo && idxAlvo !== undefined && idxAlvo !== jogadorIdx) {
-    const alvo = { ...novosJogadores[idxAlvo] };
-    if (alvo.protegido) {
-      alvo.protegido = false;
-      logEntrada += ` (${alvo.nome} protegido! Sem efeito)`;
-      alteracao = 0;
-    } else {
-      alvo.saldo += alteracao;
-      novosJogadores[idxAlvo] = verificarFalencia(verificarFundoEmergencia(alvo));
-      logEntrada += ` (Alvo: ${alvo.nome})`;
-    }
-  } else {
-    if (jogador.protegido && alteracao < 0) {
-      jogador.protegido = false;
-      logEntrada += ` (Protegido! Sem perda)`;
-      alteracao = 0;
-    } else {
-      jogador.saldo += alteracao;
-    }
-  }
-
-  novosJogadores[jogadorIdx] = verificarFalencia(verificarFundoEmergencia(jogador));
-
-  const resultadoCompra = comprarCartaBaralho(novoEstado.baralho, jogador.mao, 1);
-  novosJogadores[jogadorIdx].mao = resultadoCompra.mao;
-  novoEstado.baralho = resultadoCompra.baralho;
-
-  return {
-    ...novoEstado,
-    jogadores: novosJogadores,
-    pilhaDescarte: novaPilhaDescarte,
-    log: [...novoEstado.log, logEntrada],
-  };
+  return jogarInterno(estado, {
+    idxJogador: jogadorIdx,
+    cartaUid,
+    idxAlvo,
+    comprar: 0,
+    roubarUids,
+  });
 }
 
 export function fimDeTurnoN(estado) {
@@ -577,15 +458,7 @@ export function fimDeTurnoN(estado) {
   const numJogadores = novoEstado.jogadores.length;
   const idxJogador = novoEstado.jogadorAtivoIndex;
 
-  const jogador = { ...novoEstado.jogadores[idxJogador] };
-  const resultadoCompra = comprarCartaBaralho(novoEstado.baralho, jogador.mao, 1);
-  jogador.mao = resultadoCompra.mao;
-  novoEstado.baralho = resultadoCompra.baralho;
-
-  const novosJogadores = [...novoEstado.jogadores];
-  novosJogadores[idxJogador] = jogador;
-  novoEstado.jogadores = novosJogadores;
-
+  novoEstado = comprarPara(novoEstado, idxJogador, 1);
   novoEstado.jogadores = aplicarEventoDeusMercado(novoEstado.jogadores);
 
   let proximoIdx;
@@ -605,6 +478,8 @@ export function fimDeTurnoN(estado) {
     novoEstado.turnoAtual += 1;
   }
 
+  novoEstado = processarInicioTurno(novoEstado, proximoIdx);
+
   const vitoria = verificarVitoriaN(novoEstado.jogadores, novoEstado.turnoAtual);
   if (vitoria) {
     novoEstado.fimDeJogo = vitoria;
@@ -614,107 +489,120 @@ export function fimDeTurnoN(estado) {
 }
 
 export function descartarCartaN(estado, jogadorIdx, cartaUid) {
-  const novoEstado = { ...estado };
-  if (jogadorIdx < 0 || jogadorIdx >= novoEstado.jogadores.length) return novoEstado;
+  if (jogadorIdx < 0 || jogadorIdx >= estado.jogadores.length) return estado;
 
-  const jogador = { ...novoEstado.jogadores[jogadorIdx] };
+  const jogador = { ...estado.jogadores[jogadorIdx] };
   const idxCarta = jogador.mao.findIndex((c) => c.uid === cartaUid);
-  if (idxCarta === -1) return novoEstado;
+  if (idxCarta === -1) return estado;
 
   const carta = jogador.mao[idxCarta];
   const novaMao = [...jogador.mao];
   novaMao.splice(idxCarta, 1);
   jogador.mao = novaMao;
 
-  const novosJogadores = [...novoEstado.jogadores];
+  const novosJogadores = [...estado.jogadores];
   novosJogadores[jogadorIdx] = jogador;
 
   return {
-    ...novoEstado,
+    ...estado,
     jogadores: novosJogadores,
-    pilhaDescarte: [...novoEstado.pilhaDescarte, carta],
-    log: [...novoEstado.log, `${jogador.nome} descartou ${carta.titulo}`],
+    pilhaDescarte: [...estado.pilhaDescarte, carta],
+    log: [...estado.log, `${jogador.nome} descartou ${carta.titulo}`],
   };
 }
 
-// Versão N-jogadores de jogarCartaN que NÃO compra uma carta ao jogar.
-// Usada pelo fluxo "jogar N cartas + passar turno", onde a compra é
-// responsabilidade do fimDeTurnoN (1 carta por turno, no final).
-export function jogarCartaSemComprarN(estado, jogadorIdx, cartaUid, alvoIdx) {
-  const novoEstado = { ...estado };
-  if (jogadorIdx < 0 || jogadorIdx >= novoEstado.jogadores.length) return novoEstado;
+// =============================================
+// AREA SEGURA - Versao 1v1 (usa jogadorId)
+// =============================================
 
-  const jogador = { ...novoEstado.jogadores[jogadorIdx] };
+export function colocarCartaAreaSegura1v1(estado, jogadorId, cartaUid) {
+  const idxJogador = estado.jogadores.findIndex((j) => j.id === jogadorId);
+  if (idxJogador === -1) return estado;
+
+  const jogador = { ...estado.jogadores[idxJogador] };
+  if (jogador.areaSegura.length >= 1) return estado;
   const idxCarta = jogador.mao.findIndex((c) => c.uid === cartaUid);
-  if (idxCarta === -1) return novoEstado;
+  if (idxCarta === -1) return estado;
 
   const carta = jogador.mao[idxCarta];
   const novaMao = [...jogador.mao];
   novaMao.splice(idxCarta, 1);
   jogador.mao = novaMao;
+  jogador.areaSegura = [...jogador.areaSegura, carta];
 
-  const novaPilhaDescarte = [...novoEstado.pilhaDescarte, carta];
-  const novosJogadores = [...novoEstado.jogadores];
-
-  if (carta.tipo === TIPO_CARTA.PROTECAO) {
-    jogador.protegido = true;
-    novosJogadores[jogadorIdx] = jogador;
-    return {
-      ...novoEstado,
-      jogadores: novosJogadores,
-      pilhaDescarte: novaPilhaDescarte,
-      log: [...novoEstado.log, `${jogador.nome} ativou protecao: ${carta.titulo}`],
-    };
-  }
-
-  const sucesso = Math.random() < carta.chanceSucesso;
-  let alteracao = 0;
-  let logEntrada = '';
-
-  let idxAlvo;
-  if (carta.precisaAlvo) {
-    if (alvoIdx !== undefined && alvoIdx !== null && alvoIdx >= 0 && !novosJogadores[alvoIdx]?.falido && alvoIdx !== jogadorIdx) {
-      idxAlvo = alvoIdx;
-    } else {
-      idxAlvo = encontrarAlvoAleatorio(novosJogadores, jogadorIdx);
-    }
-  }
-
-  if (sucesso) {
-    alteracao = carta.alteracaoSaldoBase;
-    logEntrada = `${jogador.nome} jogou ${carta.titulo} com SUCESSO! (${carta.alteracaoSaldoBase > 0 ? '+' : ''}${carta.alteracaoSaldoBase})`;
-  } else {
-    alteracao = carta.alteracaoSaldoFalha;
-    logEntrada = `${jogador.nome} jogou ${carta.titulo} e FALHOU! (${carta.alteracaoSaldoFalha > 0 ? '+' : ''}${carta.alteracaoSaldoFalha})`;
-  }
-
-  if (carta.precisaAlvo && idxAlvo !== undefined && idxAlvo !== jogadorIdx) {
-    const alvo = { ...novosJogadores[idxAlvo] };
-    if (alvo.protegido) {
-      alvo.protegido = false;
-      logEntrada += ` (${alvo.nome} protegido! Sem efeito)`;
-      alteracao = 0;
-    } else {
-      alvo.saldo += alteracao;
-      novosJogadores[idxAlvo] = verificarFalencia(verificarFundoEmergencia(alvo));
-      logEntrada += ` (Alvo: ${alvo.nome})`;
-    }
-  } else {
-    if (jogador.protegido && alteracao < 0) {
-      jogador.protegido = false;
-      logEntrada += ` (Protegido! Sem perda)`;
-      alteracao = 0;
-    } else {
-      jogador.saldo += alteracao;
-    }
-  }
-
-  novosJogadores[jogadorIdx] = verificarFalencia(verificarFundoEmergencia(jogador));
+  const novosJogadores = [...estado.jogadores];
+  novosJogadores[idxJogador] = jogador;
 
   return {
-    ...novoEstado,
+    ...estado,
     jogadores: novosJogadores,
-    pilhaDescarte: novaPilhaDescarte,
-    log: [...novoEstado.log, logEntrada],
+    log: [...estado.log, `${jogador.nome} colocou ${carta.titulo} na Area Segura`],
   };
+}
+
+export function jogarCartaAreaSegura1v1(estado, jogadorId, cartaUid) {
+  const idxJogador = estado.jogadores.findIndex((j) => j.id === jogadorId);
+  if (idxJogador === -1) return estado;
+
+  const carta = estado.jogadores[idxJogador].areaSegura.find((c) => c.uid === cartaUid);
+  if (!carta) return estado;
+
+  const idxAlvo = carta.precisaAlvo ? idxAlvoOposto(idxJogador) : undefined;
+
+  return jogarInterno(estado, {
+    idxJogador,
+    cartaUid,
+    idxAlvo,
+    fonte: 'areaSegura',
+    comprar: 0,
+    origem: ' da Area Segura',
+  });
+}
+
+// =============================================
+// AREA SEGURA - Versao N jogadores
+// =============================================
+
+export function colocarCartaAreaSegura(estado, jogadorIdx, cartaUid) {
+  if (jogadorIdx < 0 || jogadorIdx >= estado.jogadores.length) return estado;
+
+  const jogador = { ...estado.jogadores[jogadorIdx] };
+  if (jogador.areaSegura.length >= 1) return estado;
+  const idxCarta = jogador.mao.findIndex((c) => c.uid === cartaUid);
+  if (idxCarta === -1) return estado;
+
+  const carta = jogador.mao[idxCarta];
+  const novaMao = [...jogador.mao];
+  novaMao.splice(idxCarta, 1);
+  jogador.mao = novaMao;
+  jogador.areaSegura = [...jogador.areaSegura, carta];
+
+  const novosJogadores = [...estado.jogadores];
+  novosJogadores[jogadorIdx] = jogador;
+
+  return {
+    ...estado,
+    jogadores: novosJogadores,
+    log: [...estado.log, `${jogador.nome} colocou ${carta.titulo} na Area Segura`],
+  };
+}
+
+export function jogarCartaAreaSegura(estado, jogadorIdx, cartaUid) {
+  if (jogadorIdx < 0 || jogadorIdx >= estado.jogadores.length) return estado;
+
+  const carta = estado.jogadores[jogadorIdx].areaSegura.find((c) => c.uid === cartaUid);
+  if (!carta) return estado;
+
+  const idxAlvo = carta.precisaAlvo
+    ? encontrarAlvoAleatorio(estado.jogadores, jogadorIdx)
+    : undefined;
+
+  return jogarInterno(estado, {
+    idxJogador: jogadorIdx,
+    cartaUid,
+    idxAlvo,
+    fonte: 'areaSegura',
+    comprar: 0,
+    origem: ' da Area Segura',
+  });
 }

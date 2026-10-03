@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react';
 import {
   criarEstadoInicial,
   criarEstadoMultiplayer,
@@ -12,6 +12,10 @@ import {
   jogarCartaSemComprarN,
   fimDeTurnoN,
   descartarCartaN,
+  colocarCartaAreaSegura,
+  jogarCartaAreaSegura,
+  colocarCartaAreaSegura1v1,
+  jogarCartaAreaSegura1v1,
 } from '../hooks/useCombat';
 import { comprarCarta as comprarCartaBaralho } from '../cards/baralhoCartas';
 
@@ -20,7 +24,7 @@ const GameContext = createContext(null);
 function gameReducer(state, action) {
   switch (action.type) {
     case 'INICIAR':
-      return criarEstadoInicial();
+      return criarEstadoInicial(action.payload?.nomeJogador);
 
    case 'INICIAR_MULTIPLAYER': {
   const { nomeJogador1, nomeJogador2, primeiroJogadorIndex, avatar1, avatar2 } = action.payload;
@@ -37,23 +41,49 @@ function gameReducer(state, action) {
     }
 
     case 'JOGAR_CARTA': {
-      const { jogadorId, cartaUid, jogadorAlvoId } = action.payload;
-      return jogarCartaEngine(state, jogadorId, cartaUid, jogadorAlvoId);
+      const { jogadorId, cartaUid, jogadorAlvoId, roubarUids } = action.payload;
+      return jogarCartaEngine(state, jogadorId, cartaUid, jogadorAlvoId, roubarUids);
     }
 
-    case 'JOGAR_CARTA_SEM_COMPRA': {
-      const { jogadorId, cartaUid, jogadorAlvoId } = action.payload;
-      return jogarCartaSemComprar(state, jogadorId, cartaUid, jogadorAlvoId);
-    }
+     case 'JOGAR_CARTA_SEM_COMPRA': {
+       const { jogadorId, cartaUid, jogadorAlvoId, roubarUids } = action.payload;
+       return jogarCartaSemComprar(state, jogadorId, cartaUid, jogadorAlvoId, roubarUids);
+     }
 
-    case 'JOGAR_CARTAS_SEM_COMPRA': {
-      const { jogadorId, cartas } = action.payload;
-      let estadoAtual = state;
-      for (const carta of cartas) {
-        estadoAtual = jogarCartaSemComprar(estadoAtual, jogadorId, carta.uid, carta.precisaAlvo ? null : null);
+     case 'COLOCAR_AREA_SEGURA': {
+       const { jogadorId, cartaUid } = action.payload;
+       return colocarCartaAreaSegura1v1(state, jogadorId, cartaUid);
+     }
+
+     case 'JOGAR_AREA_SEGURA': {
+       const { jogadorId, cartaUid } = action.payload;
+       return jogarCartaAreaSegura1v1(state, jogadorId, cartaUid);
+     }
+
+     case 'COLOCAR_AREA_SEGURA_N': {
+       const { jogadorIdx, cartaUid } = action.payload;
+       return colocarCartaAreaSegura(state, jogadorIdx, cartaUid);
+     }
+
+     case 'JOGAR_AREA_SEGURA_N': {
+       const { jogadorIdx, cartaUid } = action.payload;
+       return jogarCartaAreaSegura(state, jogadorIdx, cartaUid);
+     }
+
+      case 'JOGAR_CARTAS_SEM_COMPRA': {
+        const { jogadorId, cartas } = action.payload;
+        let estadoAtual = state;
+        for (const carta of cartas) {
+          estadoAtual = jogarCartaSemComprar(
+            estadoAtual,
+            jogadorId,
+            carta.uid,
+            null,
+            carta.roubarUids || null
+          );
+        }
+        return estadoAtual;
       }
-      return estadoAtual;
-    }
 
     // Ação atômica: joga múltiplas cartas E passa o turno numa única
     // transição de estado. Evita race conditions no multiplayer onde
@@ -63,7 +93,13 @@ function gameReducer(state, action) {
       const { jogadorId, cartas } = action.payload;
       let estadoAtual = state;
       for (const carta of cartas) {
-        estadoAtual = jogarCartaSemComprar(estadoAtual, jogadorId, carta.uid, null);
+        estadoAtual = jogarCartaSemComprar(
+          estadoAtual,
+          jogadorId,
+          carta.uid,
+          null,
+          carta.roubarUids || null
+        );
       }
       return fimDeTurnoEngine(estadoAtual);
     }
@@ -75,8 +111,8 @@ function gameReducer(state, action) {
 
     // Ação atômica (1 carta): joga + passa turno.
     case 'JOGAR_CARTA_E_PASSAR': {
-      const { jogadorId, cartaUid, jogadorAlvoId } = action.payload;
-      const aposJogar = jogarCartaEngine(state, jogadorId, cartaUid, jogadorAlvoId);
+      const { jogadorId, cartaUid, jogadorAlvoId, roubarUids } = action.payload;
+      const aposJogar = jogarCartaEngine(state, jogadorId, cartaUid, jogadorAlvoId, roubarUids);
       return fimDeTurnoEngine(aposJogar);
     }
 
@@ -89,21 +125,26 @@ function gameReducer(state, action) {
       return fimDeTurnoEngine(state);
 
     case 'JOGAR_CARTA_N': {
-      const { jogadorIdx, cartaUid, alvoIdx } = action.payload;
-      return jogarCartaN(state, jogadorIdx, cartaUid, alvoIdx);
+      const { jogadorIdx, cartaUid, alvoIdx, roubarUids } = action.payload;
+      return jogarCartaN(state, jogadorIdx, cartaUid, alvoIdx, roubarUids);
     }
 
     case 'JOGAR_CARTA_E_PASSAR_N': {
-      const { jogadorIdx: jIdx, cartaUid: cUid, alvoIdx: aIdx } = action.payload;
-      const estadoAposJogar = jogarCartaN(state, jIdx, cUid, aIdx);
+      const {
+        jogadorIdx: jIdx,
+        cartaUid: cUid,
+        alvoIdx: aIdx,
+        roubarUids: rUids,
+      } = action.payload;
+      const estadoAposJogar = jogarCartaN(state, jIdx, cUid, aIdx, rUids);
       return fimDeTurnoN(estadoAposJogar);
     }
 
     // NOVO — joga UMA carta N-player SEM comprar (usada pelo botão JOGAR
     // da ArenaMultiplayer para aplicar cada carta da seleção).
     case 'JOGAR_CARTA_SEM_COMPRA_N': {
-      const { jogadorIdx, cartaUid, alvoIdx } = action.payload;
-      return jogarCartaSemComprarN(state, jogadorIdx, cartaUid, alvoIdx);
+      const { jogadorIdx, cartaUid, alvoIdx, roubarUids } = action.payload;
+      return jogarCartaSemComprarN(state, jogadorIdx, cartaUid, alvoIdx, roubarUids);
     }
 
     // Ação atômica N-player: joga múltiplas cartas SEM comprar e passa o
@@ -117,7 +158,8 @@ function gameReducer(state, action) {
           estadoAtual,
           jogadorIdx,
           carta.uid,
-          carta.alvoIdx ?? null
+          carta.alvoIdx ?? null,
+          carta.roubarUids || null
         );
       }
       return fimDeTurnoN(estadoAtual);
@@ -203,18 +245,21 @@ function gameReducer(state, action) {
       return { ...state, fimDeJogo: action.payload };
 
     case 'RESET':
-      return criarEstadoInicial();
+      return criarEstadoInicial(action.payload?.nomeJogador);
 
     default:
       return state;
   }
 }
 
-export function GameProvider({ children }) {
-  const [estado, dispatch] = useReducer(gameReducer, null, criarEstadoInicial);
+export function GameProvider({ children, nomeJogador }) {
+  const nomeJogadorRef = useRef(nomeJogador);
+  nomeJogadorRef.current = nomeJogador;
+
+  const [estado, dispatch] = useReducer(gameReducer, null, () => criarEstadoInicial(nomeJogadorRef.current));
 
   const iniciarJogo = useCallback(() => {
-    dispatch({ type: 'INICIAR' });
+    dispatch({ type: 'INICIAR', payload: { nomeJogador: nomeJogadorRef.current } });
   }, []);
 
   const jogarCartaAction = useCallback((jogadorId, cartaUid, jogadorAlvoId) => {
@@ -247,9 +292,15 @@ export function GameProvider({ children }) {
 
   // NOVO — joga UMA carta N-player sem comprar (usada no fluxo por carta
   // do botão JOGAR, espelhando o ArenaCombate 1v1).
-  const jogarCartaSemComprarNAction = useCallback((jogadorIdx, cartaUid, alvoIdx) => {
-    dispatch({ type: 'JOGAR_CARTA_SEM_COMPRA_N', payload: { jogadorIdx, cartaUid, alvoIdx } });
-  }, []);
+  const jogarCartaSemComprarNAction = useCallback(
+    (jogadorIdx, cartaUid, alvoIdx, roubarUids = null) => {
+      dispatch({
+        type: 'JOGAR_CARTA_SEM_COMPRA_N',
+        payload: { jogadorIdx, cartaUid, alvoIdx, roubarUids },
+      });
+    },
+    []
+  );
 
   // Ação atômica N-player (joga tudo + passa turno de uma vez).
   const jogarCartasEPassarNAction = useCallback((jogadorIdx, cartas) => {
@@ -265,36 +316,62 @@ export function GameProvider({ children }) {
   }, []);
 
   const resetarJogo = useCallback(() => {
-    dispatch({ type: 'RESET' });
+    dispatch({ type: 'RESET', payload: { nomeJogador: nomeJogadorRef.current } });
   }, []);
 
-  const jogarCartaSemComprarAction = useCallback((jogadorId, cartaUid, jogadorAlvoId) => {
-    dispatch({ type: 'JOGAR_CARTA_SEM_COMPRA', payload: { jogadorId, cartaUid, jogadorAlvoId } });
-  }, []);
+  const jogarCartaSemComprarAction = useCallback(
+    (jogadorId, cartaUid, jogadorAlvoId, roubarUids = null) => {
+      dispatch({
+        type: 'JOGAR_CARTA_SEM_COMPRA',
+        payload: { jogadorId, cartaUid, jogadorAlvoId, roubarUids },
+      });
+    },
+    []
+  );
 
-  const comprarCartaJogadorAction = useCallback((jogadorId) => {
-    dispatch({ type: 'COMPRAR_CARTA_JOGADOR', payload: { jogadorId } });
-  }, []);
+   const comprarCartaJogadorAction = useCallback((jogadorId) => {
+     dispatch({ type: 'COMPRAR_CARTA_JOGADOR', payload: { jogadorId } });
+   }, []);
 
-  const value = {
-    estado,
-    iniciarJogo,
-    jogarCarta: jogarCartaAction,
-    jogarCartaSemComprar: jogarCartaSemComprarAction,
-    comprarCartaJogador: comprarCartaJogadorAction,
-    jogarCartaEPassar: jogarCartaEPassarAction,
-    jogarCartasEPassar: jogarCartasEPassarAction,
-    descartarCarta: descartarCartaAction,
-    passarTurno,
-    iniciarMultiN,
-    jogarCartaN: jogarCartaNAction,
-    jogarCartaSemComprarN: jogarCartaSemComprarNAction,
-    jogarCartasEPassarN: jogarCartasEPassarNAction,
-    descartarCartaN: descartarCartaNAction,
-    passarTurnoN,
-    resetarJogo,
-    dispatch,
-  };
+   const colocarCartaAreaSeguraAction = useCallback((jogadorId, cartaUid) => {
+     dispatch({ type: 'COLOCAR_AREA_SEGURA', payload: { jogadorId, cartaUid } });
+   }, []);
+
+   const jogarCartaAreaSeguraAction = useCallback((jogadorId, cartaUid) => {
+     dispatch({ type: 'JOGAR_AREA_SEGURA', payload: { jogadorId, cartaUid } });
+   }, []);
+
+   const colocarCartaAreaSeguraNAction = useCallback((jogadorIdx, cartaUid) => {
+     dispatch({ type: 'COLOCAR_AREA_SEGURA_N', payload: { jogadorIdx, cartaUid } });
+   }, []);
+
+   const jogarCartaAreaSeguraNAction = useCallback((jogadorIdx, cartaUid) => {
+     dispatch({ type: 'JOGAR_AREA_SEGURA_N', payload: { jogadorIdx, cartaUid } });
+   }, []);
+
+   const value = {
+     estado,
+     iniciarJogo,
+     jogarCarta: jogarCartaAction,
+     jogarCartaSemComprar: jogarCartaSemComprarAction,
+     comprarCartaJogador: comprarCartaJogadorAction,
+     colocarCartaAreaSegura: colocarCartaAreaSeguraAction,
+     jogarCartaAreaSegura: jogarCartaAreaSeguraAction,
+     colocarCartaAreaSeguraN: colocarCartaAreaSeguraNAction,
+     jogarCartaAreaSeguraN: jogarCartaAreaSeguraNAction,
+     jogarCartaEPassar: jogarCartaEPassarAction,
+     jogarCartasEPassar: jogarCartasEPassarAction,
+     descartarCarta: descartarCartaAction,
+     passarTurno,
+     iniciarMultiN,
+     jogarCartaN: jogarCartaNAction,
+     jogarCartaSemComprarN: jogarCartaSemComprarNAction,
+     jogarCartasEPassarN: jogarCartasEPassarNAction,
+     descartarCartaN: descartarCartaNAction,
+     passarTurnoN,
+     resetarJogo,
+     dispatch,
+   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }

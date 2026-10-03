@@ -1,6 +1,12 @@
 import { useEffect, useRef } from 'react';
+import { duracaoTurno } from '../cards/motorEfeitos';
 
-export function useIA(estado, dispatch) {
+// Reacao do Adam Smith: 6s para comecar a jogar. Se ele estiver sob o
+// efeito de "Sem tempo" (turno dele reduzido a 2s), reage em 2s.
+const REACAO_IA_MS = 6000;
+const REACAO_IA_MIN_MS = 2000;
+
+export function useIA(estado, dispatch, pausadoRef = null) {
   const timeoutsRef = useRef([]);
   const executandoRef = useRef(false);
   const estadoRef = useRef(estado);
@@ -33,6 +39,21 @@ export function useIA(estado, dispatch) {
     const MAX_CARTAS_IA = 2;
     let cartasJogadas = 0;
 
+    // Agenda uma etapa da sequencia. Se houver destaque de coringa em
+    // andamento, reaguarda (300ms) ate o destaque terminar - o turno da IA
+    // so continua depois dos segundos de destaque.
+    const agendar = (fn, ms) => {
+      const t = setTimeout(function tentar() {
+        if (pausadoRef && pausadoRef.current) {
+          const tp = setTimeout(tentar, 300);
+          timeoutsRef.current.push(tp);
+        } else {
+          fn();
+        }
+      }, ms);
+      timeoutsRef.current.push(t);
+    };
+
     function jogarProximaCarta() {
       const estadoAtual = estadoRef.current;
       const idxIA = estadoAtual.jogadorAtivoIndex;
@@ -42,20 +63,19 @@ export function useIA(estado, dispatch) {
         cartasJogadas++;
         dispatch({ type: 'IA_JOGAR_CARTA' });
 
-        const tProx = setTimeout(() => {
+        agendar(() => {
           jogarProximaCarta();
         }, 800);
-        timeoutsRef.current.push(tProx);
       } else {
         comprarEDescartar();
       }
     }
 
     function comprarEDescartar() {
-      const tComprar = setTimeout(() => {
+      agendar(() => {
         dispatch({ type: 'IA_COMPRAR_CARTA' });
 
-        const tDescarte = setTimeout(() => {
+        agendar(() => {
           const estadoAtual = estadoRef.current;
           const idxIA = estadoAtual.jogadorAtivoIndex;
           const ia = estadoAtual.jogadores[idxIA];
@@ -65,25 +85,22 @@ export function useIA(estado, dispatch) {
             dispatch({ type: 'IA_DESCARTAR_CARTA', payload: { cartaUid: cartaDescarte.uid } });
           }
 
-          const tFim = setTimeout(() => {
+          agendar(() => {
             dispatch({ type: 'IA_FIM_TURNO' });
             executandoRef.current = false;
           }, 500);
-
-          timeoutsRef.current.push(tFim);
         }, 500);
-
-        timeoutsRef.current.push(tDescarte);
       }, 600);
-
-      timeoutsRef.current.push(tComprar);
     }
 
-    const t1 = setTimeout(() => {
-      jogarProximaCarta();
-    }, 600);
+    const atrasoReacao = Math.max(
+      REACAO_IA_MIN_MS,
+      Math.min(REACAO_IA_MS, duracaoTurno(jogadorAtivo) * 1000)
+    );
 
-    timeoutsRef.current.push(t1);
+    agendar(() => {
+      jogarProximaCarta();
+    }, atrasoReacao);
 
     return () => {
       timeoutsRef.current.forEach((t) => clearTimeout(t));

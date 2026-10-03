@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   TextInput,
   Image,
   TouchableOpacity,
@@ -9,23 +8,62 @@ import {
   Dimensions,
   ImageBackground,
 } from 'react-native';
-import { getAvatarById, getAvatarId, getAllAvatares } from '../utils/avatar';
+import Text, { FONTE } from '../components/Texto';
+import { getAvatarById, getAllAvatares } from '../utils/avatar';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const avatares = getAllAvatares();
 
-const BORDER_COLOR = '#c89b3c';
-const BG_PAINEL = 'rgba(10, 10, 30, 0.92)';
+const GOLD = '#c8963c';
+const GOLD_LIGHT = '#f0b429';
+const BG_PAINEL = 'rgba(10, 18, 34, 0.96)';
+const BG_FUNDO = '#0A0714';
+const VERDE = '#3df064';
+const VERDE_ESCURO = '#0e5a26';
+const CANTO_SIZE = 12;
 
-const TelaPerfil = ({ onVoltar, onConfiguracoes, onSobre, onSair, perfil, onSalvar }) => {
+const FUNDO_PERFIL = require('../assets/sprites/perfil/background.png');
+
+// Largura do painel — altere aqui para aumentar/diminuir tudo proporcionalmente.
+const PAINEL_WIDTH = SCREEN_WIDTH * 0.55;
+
+function CantosDecorativos({ cor = GOLD_LIGHT }) {
+  return (
+    <>
+      <View style={[estilosCanto.base, estilosCanto.tl, { borderColor: cor }]} />
+      <View style={[estilosCanto.base, estilosCanto.tr, { borderColor: cor }]} />
+      <View style={[estilosCanto.base, estilosCanto.bl, { borderColor: cor }]} />
+      <View style={[estilosCanto.base, estilosCanto.br, { borderColor: cor }]} />
+    </>
+  );
+}
+
+function Ornamento({ lado }) {
+  const isEsq = lado === 'esq';
+  return (
+    <View style={estilosOrnamento.container}>
+      {isEsq ? (
+        <>
+          <View style={estilosOrnamento.linha} />
+          <View style={estilosOrnamento.diamante} />
+          <View style={[estilosOrnamento.seta, estilosOrnamento.setaDir]} />
+        </>
+      ) : (
+        <>
+          <View style={[estilosOrnamento.seta, estilosOrnamento.setaEsq]} />
+          <View style={estilosOrnamento.diamante} />
+          <View style={estilosOrnamento.linha} />
+        </>
+      )}
+    </View>
+  );
+}
+
+const TelaPerfil = ({ onVoltar, perfil, onSalvar }) => {
   const [nickName, setNickName] = useState(perfil?.nickName || 'JOGADOR_1');
   const [avatarId, setAvatarId] = useState(perfil?.avatar || '1');
   const avatarSelecionado = getAvatarById(avatarId);
-
-  const handleSalvarNome = () => {
-    onSalvar({ nickName, avatar: avatarId });
-  };
 
   const handleConfirmar = () => {
     onSalvar({ nickName, avatar: avatarId });
@@ -34,81 +72,88 @@ const TelaPerfil = ({ onVoltar, onConfiguracoes, onSobre, onSair, perfil, onSalv
 
   return (
     <ImageBackground
+      source={FUNDO_PERFIL}
       style={styles.background}
-      resizeMode="contain"
+      resizeMode="cover"
     >
-      <View style={styles.layout}>
-        <View style={styles.ladoEsquerdo}>
-          <Text style={styles.tituloNeon}>PERFIL DO{'\n'}JOGADOR</Text>
+      <View style={styles.overlay} pointerEvents="none" />
 
-          <View style={styles.menuLateral}>
-            <TouchableOpacity style={styles.menuBtnVoltar} onPress={onVoltar} activeOpacity={0.7}>
-              <Image source={require('../assets/sprites/menu/voltar.png')} style={styles.menuBtnIconeVoltar} resizeMode="contain" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuBtn} onPress={onConfiguracoes} activeOpacity={0.7}>
-              <Image source={require('../assets/sprites/menu/configura_btn.png')} style={styles.menuBtnIcone} resizeMode="contain" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuBtn} onPress={onSobre} activeOpacity={0.7}>
-              <Image source={require('../assets/sprites/menu/sobre_btn.png')} style={styles.menuBtnIcone} resizeMode="contain" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuBtn} onPress={onSair} activeOpacity={0.7}>
-              <Image source={require('../assets/sprites/menu/sair_btn.png')} style={styles.menuBtnIcone} resizeMode="contain" />
-            </TouchableOpacity>
+      <TouchableOpacity style={styles.btnVoltar} onPress={onVoltar} activeOpacity={0.7}>
+        <Image
+          source={require('../assets/sprites/um_jogador/voltar_btn.png')}
+          style={styles.btnVoltarIcone}
+          resizeMode="contain"
+        />
+      </TouchableOpacity>
+
+      <View style={styles.conteudo}>
+        <View style={styles.painel}>
+          <CantosDecorativos />
+
+          <View style={styles.painelTituloRow}>
+            <Ornamento lado="esq" />
+            <Text style={styles.painelTitulo}>EDITAR AVATAR</Text>
+            <Ornamento lado="dir" />
           </View>
-        </View>
+          <View style={styles.painelDivisor} />
 
-        <View style={styles.ladoDireito}>
-          <View style={styles.painel}>
-            <Text style={styles.painelTitulo}>EDIT PROFILE</Text>
-
-            <View style={styles.painelCorpo}>
-              <View style={styles.colunaAvatar}>
-                <View style={styles.avatarSpotlight}>
-                  <Image source={avatarSelecionado} style={styles.avatarGrande} resizeMode="contain" />
-                </View>
-
-                <View style={styles.inputRow}>
-                  <TextInput
-                    style={styles.input}
-                    value={nickName}
-                    onChangeText={setNickName}
-                    maxLength={20}
-                    placeholderTextColor="#888"
-                  />
-                  <TouchableOpacity style={styles.btnEditar} onPress={() => {}}>
-                    <Text style={styles.btnEditarTexto}>✏️</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity style={styles.btnSalvarNome} onPress={handleSalvarNome} activeOpacity={0.7}>
-                  <Text style={styles.btnCheck}>✓</Text>
-                  <Text style={styles.btnSalvarNomeTexto}>SALVAR NOME</Text>
-                </TouchableOpacity>
+          <View style={styles.painelCorpo}>
+            {/* Coluna esquerda: preview + input */}
+            <View style={styles.colunaAvatar}>
+              <View style={styles.avatarSpotlight}>
+                <CantosDecorativos cor={GOLD} />
+                <Image
+                  source={avatarSelecionado}
+                  style={styles.avatarGrande}
+                  resizeMode="contain"
+                />
               </View>
 
-              <View style={styles.colunaGrid}>
-                <View style={styles.gridAvatares}>
-                  {avatares.map((item) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={[
-                        styles.avatarItem,
-                        avatarId === item.id && styles.avatarSelecionado,
-                      ]}
-                      onPress={() => setAvatarId(item.id)}
-                      activeOpacity={0.7}
-                    >
-                      <Image source={item.source} style={styles.avatarMini} resizeMode="contain" />
-                    </TouchableOpacity>
-                  ))}
-                </View>
+              <TextInput
+                style={styles.input}
+                value={nickName}
+                onChangeText={setNickName}
+                maxLength={20}
+                placeholderTextColor="#888"
+                autoCapitalize="characters"
+              />
+            </View>
 
-                <TouchableOpacity style={styles.btnConfirmar} onPress={handleConfirmar} activeOpacity={0.7}>
-                  <Text style={styles.btnCheckVerde}>✓</Text>
-                  <Text style={styles.btnConfirmarTexto}>CONFIRMAR{'\n'}MUDANÇAS</Text>
-                </TouchableOpacity>
+            {/* Coluna direita: grid 4x2 de avatares */}
+            <View style={styles.colunaGrid}>
+              <View style={styles.gridAvatares}>
+                {avatares.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.avatarItem,
+                      avatarId === item.id && styles.avatarItemSelecionado,
+                    ]}
+                    onPress={() => setAvatarId(item.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Image
+                      source={item.source}
+                      style={styles.avatarMini}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
+          </View>
+
+          <View style={styles.rodape}>
+            <TouchableOpacity
+              style={styles.btnConfirmar}
+              onPress={handleConfirmar}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.btnConfirmarCheck}>✓</Text>
+              <Text style={styles.btnConfirmarTexto}>
+                CONFIRMAR{'\n'}MUDANÇAS
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -116,220 +161,241 @@ const TelaPerfil = ({ onVoltar, onConfiguracoes, onSobre, onSair, perfil, onSalv
   );
 };
 
+const estilosCanto = StyleSheet.create({
+  base: {
+    position: 'absolute',
+    width: CANTO_SIZE,
+    height: CANTO_SIZE,
+  },
+  tl: { top: -3, left: -3, borderTopWidth: 3, borderLeftWidth: 3 },
+  tr: { top: -3, right: -3, borderTopWidth: 3, borderRightWidth: 3 },
+  bl: { bottom: -3, left: -3, borderBottomWidth: 3, borderLeftWidth: 3 },
+  br: { bottom: -3, right: -3, borderBottomWidth: 3, borderRightWidth: 3 },
+});
+
+const estilosOrnamento = StyleSheet.create({
+  container: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  seta: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 4,
+    borderBottomWidth: 4,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+  },
+  setaDir: {
+    borderLeftWidth: 6,
+    borderLeftColor: GOLD_LIGHT,
+  },
+  setaEsq: {
+    borderRightWidth: 6,
+    borderRightColor: GOLD_LIGHT,
+  },
+  diamante: {
+    width: 7,
+    height: 7,
+    backgroundColor: GOLD_LIGHT,
+    transform: [{ rotate: '45deg' }],
+  },
+  linha: {
+    flex: 1,
+    height: 2,
+    backgroundColor: GOLD_LIGHT,
+  },
+});
+
 const styles = StyleSheet.create({
   background: {
     flex: 1,
     width: '100%',
     height: '100%',
-    backgroundColor: '#07060bff',
+    backgroundColor: BG_FUNDO,
   },
-  layout: {
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  },
+  btnVoltar: {
+    position: 'absolute',
+    top: SCREEN_HEIGHT * 0.04,
+    left: SCREEN_WIDTH * 0.025,
+    width: SCREEN_WIDTH * 0.11,
+    height: SCREEN_WIDTH * 0.11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  btnVoltarIcone: {
+    width: '50%',
+    height: '50%',
+  },
+  conteudo: {
     flex: 1,
-    flexDirection: 'row',
-    paddingTop: SCREEN_HEIGHT * 0.05,
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: SCREEN_WIDTH * 0.03,
-  },
-  ladoEsquerdo: {
-    width: '30%',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    paddingTop: SCREEN_HEIGHT * 0.02,
-  },
-  tituloNeon: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ff3cac',
-    textShadowColor: '#ff3cac',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 15,
-    marginBottom: SCREEN_HEIGHT * 0.06,
-    lineHeight: 30,
-  },
-  menuLateral: {
-    gap: 14,
-    width: '100%',
-  },
-  menuBtnVoltar: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-    borderRadius: 8,
-  },
-  menuBtnIconeVoltar: {
-    width: SCREEN_WIDTH * 0.20,
-    height: SCREEN_HEIGHT * 0.10,
-  },
-  menuBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-    borderRadius: 8,
-  },
-  menuBtnIcone: {
-    width: SCREEN_WIDTH * 0.24,
-    height: SCREEN_HEIGHT * 0.13,
-  },
-  ladoDireito: {
-    width: '70%',
-    justifyContent: 'flex-start',
-    alignItems: 'stretch',
+    paddingVertical: SCREEN_HEIGHT * 0.03,
   },
   painel: {
-    flex: 1,
+    width: PAINEL_WIDTH,
     backgroundColor: BG_PAINEL,
-    borderWidth: 2,
-    borderColor: BORDER_COLOR,
-    borderRadius: 12,
-    paddingHorizontal: SCREEN_WIDTH * 0.015,
-    paddingTop: 12,
-    paddingBottom: 14,
+    borderWidth: 3,
+    borderColor: GOLD,
+    borderRadius: 6,
+    paddingHorizontal: PAINEL_WIDTH * 0.05,
+    paddingTop: PAINEL_WIDTH * 0.03,
+    paddingBottom: PAINEL_WIDTH * 0.03,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.7,
+    shadowRadius: 14,
+    elevation: 12,
+  },
+  painelTituloRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   painelTitulo: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: PAINEL_WIDTH * 0.058,
+    fontWeight: '800',
+    letterSpacing: 3,
+    textShadowColor: '#000',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 0,
     textAlign: 'center',
-    letterSpacing: 2,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER_COLOR,
-    marginBottom: 10,
+  },
+  painelDivisor: {
+    height: 2,
+    backgroundColor: GOLD,
+    marginTop: PAINEL_WIDTH * 0.022,
+    marginBottom: PAINEL_WIDTH * 0.028,
   },
   painelCorpo: {
-    flex: 1,
     flexDirection: 'row',
-    gap: 12,
+    gap: PAINEL_WIDTH * 0.028,
+    alignItems: 'flex-start',
   },
   colunaAvatar: {
-    width: '38%',
+    width: '32%',
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
   avatarSpotlight: {
-    width: SCREEN_WIDTH * 0.16,
-    height: SCREEN_WIDTH * 0.20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: BORDER_COLOR,
-    backgroundColor: 'rgba(30, 30, 60, 0.8)',
+    width: '100%',
+    aspectRatio: 0.95,
+    borderRadius: 4,
+    borderWidth: 3,
+    borderColor: GOLD,
+    backgroundColor: '#182740',
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
-    marginBottom: 10,
+    marginBottom: PAINEL_WIDTH * 0.028,
+    shadowColor: GOLD_LIGHT,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 8,
   },
   avatarGrande: {
-    width: '90%',
-    height: '90%',
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: 8,
+    width: '94%',
+    height: '94%',
   },
   input: {
-    flex: 1,
-    height: 38,
-    backgroundColor: '#0d0d1a',
+    width: '100%',
+    height: PAINEL_WIDTH * 0.085,
+    backgroundColor: '#0c1424',
     borderWidth: 2,
-    borderColor: BORDER_COLOR,
-    borderRadius: 6,
+    borderColor: GOLD,
+    borderRadius: 4,
     color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: PAINEL_WIDTH * 0.036,
+    fontFamily: FONTE,
     paddingHorizontal: 10,
     letterSpacing: 1,
-  },
-  btnEditar: {
-    width: 38,
-    height: 38,
-    backgroundColor: BORDER_COLOR,
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 6,
-  },
-  btnEditarTexto: {
-    fontSize: 16,
-  },
-  btnSalvarNome: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(40, 40, 70, 0.9)',
-    borderWidth: 2,
-    borderColor: BORDER_COLOR,
-    borderRadius: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    gap: 8,
-    width: '100%',
-    justifyContent: 'center',
-  },
-  btnCheck: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  btnSalvarNomeTexto: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-    letterSpacing: 1,
+    paddingVertical: 0,
   },
   colunaGrid: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
   gridAvatares: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    alignContent: 'flex-start',
+    rowGap: PAINEL_WIDTH * 0.02,
   },
   avatarItem: {
-    width: SCREEN_WIDTH * 0.085,
-    height: SCREEN_WIDTH * 0.085,
-    borderRadius: 8,
+    width: '23.5%',
+    aspectRatio: 1,
+    borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#444',
-    backgroundColor: 'rgba(20, 20, 40, 0.8)',
+    borderColor: '#3d5a8c',
+    backgroundColor: '#131e36',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
-  avatarSelecionado: {
-    borderColor: '#4CAF50',
+  avatarItemSelecionado: {
+    borderColor: VERDE,
     borderWidth: 3,
-    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+    backgroundColor: 'rgba(61, 240, 100, 0.12)',
+    shadowColor: VERDE,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
+    elevation: 8,
   },
   avatarMini: {
-    width: '85%',
-    height: '85%',
+    width: '100%',
+    height: '100%',
+  },
+  rodape: {
+    marginTop: PAINEL_WIDTH * 0.03,
+    alignItems: 'flex-end',
   },
   btnConfirmar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(30, 60, 30, 0.9)',
-    borderWidth: 2,
-    borderColor: '#4CAF50',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    gap: 8,
-    alignSelf: 'flex-end',
-    marginTop: 8,
+    gap: 10,
+    backgroundColor: VERDE_ESCURO,
+    borderWidth: 3,
+    borderColor: VERDE,
+    borderRadius: 6,
+    paddingHorizontal: PAINEL_WIDTH * 0.045,
+    paddingVertical: PAINEL_WIDTH * 0.022,
+    shadowColor: VERDE,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 8,
   },
-  btnCheckVerde: {
-    color: '#4CAF50',
-    fontSize: 18,
-    fontWeight: 'bold',
+  btnConfirmarCheck: {
+    color: VERDE,
+    fontSize: PAINEL_WIDTH * 0.075,
+    fontWeight: '900',
+    lineHeight: PAINEL_WIDTH * 0.08,
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 0,
   },
   btnConfirmarTexto: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    lineHeight: 16,
+    color: '#FFFFFF',
+    fontSize: PAINEL_WIDTH * 0.036,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    lineHeight: PAINEL_WIDTH * 0.044,
+    textAlign: 'center',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 0,
   },
 });
 

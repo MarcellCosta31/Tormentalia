@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Image,
   Dimensions,
@@ -9,6 +8,7 @@ import {
   Modal,
   Pressable,
 } from 'react-native';
+import Text from '../components/Texto';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -24,6 +24,9 @@ import { useIAMulti } from '../hooks/useIAMulti';
 import { useMultiplayer } from '../multiplayer/useMultiplayer';
 import TurnoIndicador from '../components/arena/TurnoIndicador';
 import CartaZoomModal from '../components/arena/CartaZoomModal';
+import DestaqueCoringa, { DURACAO_DESTAQUE_CORINGA } from '../components/arena/DestaqueCoringa';
+import ResultadoJogada, { DURACAO_ZOOM_RESULTADO } from '../components/arena/ResultadoJogada';
+import ModalRouboCego from '../components/arena/ModalRouboCego';
 import AnimacaoInicioBatalha from '../components/arena/AnimacaoInicioBatalha';
 import MaoJogador from '../components/arena/MaoJogador';
 import MaoOponente from '../components/arena/MaoOponente';
@@ -33,15 +36,16 @@ import ScorePopup from '../components/arena/ScorePopup';
 import { screenShake } from '../utils/screenShake';
 import { getAvatarById } from '../utils/avatar';
 import { soundManager } from '../utils/sound';
+import AreaSegura from '../components/arena/AreaSegura';
+import FundoMadeira from '../components/arena/FundoMadeira';
+import { artePorCarta } from '../cards/arteCarta';
+import { TIPO_CARTA } from '../cards/cartasTGA';
+import { duracaoTurno, TURNO_BASE_SEGUNDOS } from '../cards/motorEfeitos';
 
-const bgImg = require('../assets/sprites/batalha/background.jpg');
 const traseiraImg = require('../assets/cards/traseira_cartas.jpg');
-const nossoImg = require('../assets/cards/nosso.png');
-const toyotinhoImg = require('../assets/cards/toyotinho.png');
 const pauseImg = require('../assets/sprites/menu/pause.jpg');
 
-const cardImages = { 0: nossoImg, 1: toyotinhoImg };
-const imgPorCarta = (c) => (c && cardImages[c.uid % 2]) || traseiraImg;
+const imgPorCarta = (c) => artePorCarta(c) || traseiraImg;
 
 const { width: W, height: H } = Dimensions.get('window');
 
@@ -61,7 +65,22 @@ const POS_OPONENTE_2P = { x: W / 2, y: H * 0.22 };
 
 const POS_MAO_1V1_OPONENTE = { x: W / 2 - 30, y: 20 };
 const POS_MAO_1V1_LOCAL = { x: W / 2 - 30, y: H - 120 };
-const DECKS_POS_1V1 = { drawX: W / 2 - 58 - 18, drawY: H * 0.44 + 40, descX: W / 2 + 18, descY: H * 0.44 + 40 };
+// DecksArea (1v1): mesma geometria de DecksArea.js — pilha de compra 50x70,
+// descarte 64x90, gap 36, linha em `top: H * 0.44` + paddingVertical 6.
+const DECKS_GAP = 36;
+const DECK_DRAW_W = 50;
+const DECK_DRAW_H = 70;
+const DECK_DESC_W = 64;
+const DECK_DESC_H = 90;
+const DECKS_ROW_TOP = H * 0.44 + 6;
+const DECKS_ROW_H = Math.max(DECK_DRAW_H, DECK_DESC_H);
+const DECKS_ROW_X = (W - (DECK_DRAW_W + DECKS_GAP + DECK_DESC_W)) / 2;
+const DECKS_POS_1V1 = {
+  drawX: DECKS_ROW_X + (DECK_DRAW_W - CARD_W) / 2,
+  drawY: DECKS_ROW_TOP + (DECKS_ROW_H - DECK_DRAW_H) / 2 + (DECK_DRAW_H - CARD_H) / 2,
+  descX: DECKS_ROW_X + DECK_DRAW_W + DECKS_GAP + (DECK_DESC_W - CARD_W) / 2,
+  descY: DECKS_ROW_TOP + (DECKS_ROW_H - DECK_DESC_H) / 2 + (DECK_DESC_H - CARD_H) / 2,
+};
 
 const PLAYER_COLORS = ['#FFD54F', '#EF5350', '#42A5F5', '#66BB6A', '#AB47BC', '#FF7043', '#26C6DA', '#EC407A'];
 
@@ -106,14 +125,14 @@ function CartaVoadora({ imgSource, deX, deY, paraX, paraY, onCompleto, duracao =
   }));
 
   useEffect(() => {
-    const rotacaoAleatoria = (Math.random() - 0.5) * 8;
+    const rotacaoAleatoria = (Math.random() - 0.5) * 3;
 
     posX.value = withTiming(paraX, { duration: duracao });
-    escala.value = withTiming(0.5, { duration: duracao });
-    rotacao.value = withSpring(rotacaoAleatoria, { damping: 8, stiffness: 50 });
+    escala.value = withTiming(0.65, { duration: duracao });
+    rotacao.value = withSpring(rotacaoAleatoria, { damping: 12, stiffness: 60 });
     posY.value = withSequence(
-      withTiming(Math.min(deY, paraY) - 30, { duration: duracao * 0.5 }),
-      withSpring(paraY, { damping: 8, stiffness: 40 }),
+      withTiming(Math.min(deY, paraY) - 18, { duration: duracao * 0.5 }),
+      withSpring(paraY, { damping: 12, stiffness: 55 }),
     );
 
     opacidade.value = withDelay(
@@ -148,20 +167,20 @@ function CartaSaidaComLift({ imgSource, deX, deY, paraX, paraY, duracao = VOO_DU
 
   useEffect(() => {
     const somTimer = setTimeout(() => soundManager.playCardPlay(), delay);
-    const rotacaoAleatoria = (Math.random() - 0.5) * 10;
+    const rotacaoAleatoria = (Math.random() - 0.5) * 4;
 
     posY.value = withDelay(delay, withSequence(
-      withSpring(deY - 55, { damping: 7, stiffness: 80 }),
-      withTiming(Math.min(deY, paraY) - 40, { duration: duracao * 0.5 }),
-      withSpring(paraY, { damping: 8, stiffness: 40 }),
+      withSpring(deY - 35, { damping: 11, stiffness: 100 }),
+      withTiming(Math.min(deY, paraY) - 25, { duration: duracao * 0.5 }),
+      withSpring(paraY, { damping: 11, stiffness: 55 }),
     ));
     escala.value = withDelay(delay, withSequence(
-      withSpring(1.22, { damping: 6, stiffness: 100 }),
-      withSpring(0.7, { damping: 8, stiffness: 30 }),
+      withSpring(1.1, { damping: 10, stiffness: 110 }),
+      withSpring(0.75, { damping: 11, stiffness: 60 }),
     ));
     rotacao.value = withDelay(delay, withSequence(
-      withSpring(rotacaoAleatoria, { damping: 7, stiffness: 60 }),
-      withSpring(0, { damping: 10, stiffness: 50 }),
+      withSpring(rotacaoAleatoria, { damping: 11, stiffness: 80 }),
+      withSpring(0, { damping: 13, stiffness: 70 }),
     ));
 
     posX.value = withDelay(delay + LIFT_DURACAO, withTiming(paraX, { duration: duracao }));
@@ -310,7 +329,7 @@ function MesaCentral({ numJogadores, baralho, pilhaDescarte }) {
             <View style={styles.descarteMini}>
               {pilhaDescarte && pilhaDescarte.length > 0 ? (
                 <Image
-                  source={cardImages[(pilhaDescarte[pilhaDescarte.length - 1]?.uid || 0) % 2]}
+                  source={artePorCarta(pilhaDescarte[pilhaDescarte.length - 1])}
                   style={styles.deckMini}
                   resizeMode="cover"
                 />
@@ -338,15 +357,34 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
     dispatch,
   } = useGameState();
 
-  const [cartaZoom, setCartaZoom] = useState(null);
-  const [modalPausa, setModalPausa] = useState(false);
-  const [cartasDescarte, setCartasDescarte] = useState([]);
-  const [voadora2, setVoadora2] = useState(null);
-  const [batalhaIniciada, setBatalhaIniciada] = useState(false);
-  const [cartasSelecionadas, setCartasSelecionadas] = useState([]);
-  const [particlesData, setParticlesData] = useState({ visivel: false, x: 0, y: 0, cores: null });
+const [cartaZoom, setCartaZoom] = useState(null);
+   const [modalPausa, setModalPausa] = useState(false);
+   const [cartasDescarte, setCartasDescarte] = useState([]);
+   const [voadora2, setVoadora2] = useState(null);
+   const [batalhaIniciada, setBatalhaIniciada] = useState(false);
+   const [cartasSelecionadas, setCartasSelecionadas] = useState([]);
+   const [areaSeguraSelecionadas, setAreaSeguraSelecionadas] = useState([]);
+   const [areaSeguraVisivel, setAreaSeguraVisivel] = useState(true);
+   const [particlesData, setParticlesData] = useState({ visivel: false, x: 0, y: 0, cores: null });
   const [scorePopups, setScorePopups] = useState([]);
-  const [cartaRecemCompradaUid, setCartaRecemCompradaUid] = useState(null);
+   const [cartaRecemCompradaUid, setCartaRecemCompradaUid] = useState(null);
+   // true enquanto as cartas jogadas voam pro descarte (pausa o timer).
+   const [jogandoEmAndamento, setJogandoEmAndamento] = useState(false);
+   // Evita passar o turno 2x no mesmo turno (timer x clique manual).
+   const passouNesteTurnoRef = useRef(null);
+   // Pendencia do roubo as cegas (carta Vigarice): { cartas, uidCarta,
+   // quantidade, alvos: [{ idx, nome, mao }] }.
+   const [modalRoubo, setModalRoubo] = useState(null);
+   // Destaque da carta coringa jogada (pausa o turno por alguns segundos).
+   const [destaqueCoringa, setDestaqueCoringa] = useState(null);
+   const destaqueRef = useRef(false);
+   // Zoom de SUCESSO/FALHA das cartas jogadas (2s antes da animacao).
+   const [zoomResultado, setZoomResultado] = useState(null);
+   const resultadoRef = useRef(false);
+   const resultadoVistoSeqRef = useRef(0);
+   // Coringas da mesma leva que esperam o zoom fechar para abrir o
+   // destaque deles.
+   const pendenciaCoringaRef = useRef([]);
 
   const iaAnimacaoProcessada = useRef(null);
   const estadoRef = useRef(estado);
@@ -367,6 +405,68 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
   }));
 
   useEffect(() => { estadoRef.current = estado; }, [estado]);
+
+  // ------------------------------------------------------------------
+  // RESULTADO DAS JOGADAS (zoom SUCESSO/FALHA) + DESTAQUE DE CORINGA.
+  // Quem quer que jogue (local, IA ou remoto): o motor grava cada
+  // jogada em estado.ultimasJogadas (sync leva o resultado pra todos).
+  // O zoom fica 2s; coringas abrem o destaque DEPOIS do zoom fechar.
+  // ------------------------------------------------------------------
+  const fecharDestaque = useCallback(() => {
+    destaqueRef.current = false;
+    setDestaqueCoringa(null);
+  }, []);
+
+  const abrirDestaqueCoringa = (entrada) => {
+    destaqueRef.current = true;
+    setDestaqueCoringa({ carta: entrada.carta, sucesso: entrada.sucesso });
+    screenShake(shakeX, shakeY, 10);
+    soundManager.playCardPlay();
+  };
+
+  const fecharZoomResultado = () => {
+    resultadoRef.current = false;
+    setZoomResultado(null);
+    const pend = pendenciaCoringaRef.current;
+    pendenciaCoringaRef.current = [];
+    if (pend.length > 0) abrirDestaqueCoringa(pend[0]);
+  };
+
+  useEffect(() => {
+    const lista = estado?.ultimasJogadas;
+    if (!lista) return;
+    if (lista.length === 0) {
+      // Partida nova/reiniciada: zera o cursor de seq.
+      resultadoVistoSeqRef.current = 0;
+      return;
+    }
+    const novas = lista.filter((r) => r.seq > resultadoVistoSeqRef.current);
+    const ultimoSeq = lista[lista.length - 1].seq;
+    resultadoVistoSeqRef.current = Math.max(resultadoVistoSeqRef.current, ultimoSeq);
+    if (novas.length === 0) return;
+
+    const coringas = novas.filter((r) => r.carta && r.carta.tipo === TIPO_CARTA.CORINGA);
+    const normais = novas.filter((r) => !r.carta || r.carta.tipo !== TIPO_CARTA.CORINGA);
+
+    if (normais.length > 0) {
+      pendenciaCoringaRef.current = coringas;
+      resultadoRef.current = true;
+      setZoomResultado(normais);
+      normais.forEach((r) => {
+        if (r.sucesso) soundManager.playScoreGain();
+        else soundManager.playScoreLose();
+      });
+    } else if (coringas.length > 0) {
+      abrirDestaqueCoringa(coringas[0]);
+    }
+  }, [estado?.ultimasJogadas]);
+
+  // Pausa a IA local enquanto qualquer destaque/zoom estiver em tela.
+  const iaPausadaRef = {
+    get current() {
+      return destaqueRef.current || resultadoRef.current;
+    },
+  };
 
   const enviarEstadoRef = useRef(null);
   const { enviarAcaoCliente, enviarEstado, enviarGameOver } = useMultiplayer(
@@ -417,11 +517,13 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
   }, [isMultiplayer, isHost, estado?.isMultiplayer, estado?.jogadores?.length, quantidade, multiplayerConfig, dispatch]);
 
   // ------------------ IA local (só simulação) ------------------
-  useIAMulti(isMultiplayer ? null : estado, dispatch);
+  useIAMulti(isMultiplayer ? null : estado, dispatch, iaPausadaRef);
 
   // ------------------ Limpa seleção ao trocar turno ------------------
   useEffect(() => {
     setCartasSelecionadas([]);
+    setAreaSeguraSelecionadas([]);
+    setJogandoEmAndamento(false);
     iaAnimacaoProcessada.current = null;
   }, [estado?.jogadorAtivoIndex, estado?.turnoAtual]);
 
@@ -443,6 +545,17 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
   const nomeJogadorAtivo = isMinhaVez
     ? (jogadorLocal?.nome || 'VOCE')
     : (jogadorAtivo?.nome || 'OPONENTE');
+
+  // ------------------ Timer de turno (20s + efeitos TEMPO_TURNO) --
+  const jogadorAtivoTimer = jogadores[estado?.jogadorAtivoIndex ?? 0];
+  const duracaoTimer = jogadorAtivoTimer
+    ? duracaoTurno(jogadorAtivoTimer)
+    : TURNO_BASE_SEGUNDOS;
+  const chaveTimer = `${estado?.jogadorAtivoIndex ?? 0}_${estado?.turnoAtual ?? 1}`;
+  // Local (vs IA): contagem so no turno humano. MP: todos veem, so o
+  // host manda passar a vez quando o tempo esgota.
+  const tempoAtivo =
+    !!estado?.batalhaIniciada && !estado?.fimDeJogo && (isMultiplayer || isMinhaVez);
 
   const posicoes = calcularPosicoes(quantidade);
   const posMaoLocal = { x: W / 2 - 30, y: H - 110 };
@@ -562,22 +675,71 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
     });
   }, [isMinhaVez]);
 
-  const aplicarJogadaRemota = (carta) => {
+  const handleColocarAreaSegura = useCallback(() => {
+    if (!isMinhaVez || cartasSelecionadas.length === 0) return;
+    const carta = cartasSelecionadas[0];
+    setCartasSelecionadas([]);
     if (isMultiplayer) {
       if (isHost) {
         dispatch({
-          type: 'JOGAR_CARTA_SEM_COMPRA',
-          payload: { jogadorId: jogadorLocal.id, cartaUid: carta.uid, jogadorAlvoId: null },
+          type: 'COLOCAR_AREA_SEGURA_N',
+          payload: { jogadorIdx: meuIdx, cartaUid: carta.uid },
         });
       } else {
         enviarAcaoCliente({
-          type: 'JOGAR_CARTA_SEM_COMPRA',
-          payload: { jogadorId: jogadorLocal.id, cartaUid: carta.uid, jogadorAlvoId: null },
+          type: 'COLOCAR_AREA_SEGURA_N',
+          payload: { jogadorIdx: meuIdx, cartaUid: carta.uid },
         });
       }
     } else {
-      let alvoIdx = null;
-      if (carta.precisaAlvo) {
+      dispatch({ type: 'COLOCAR_AREA_SEGURA_N', payload: { jogadorIdx: meuIdx, cartaUid: carta.uid } });
+    }
+  }, [isMinhaVez, cartasSelecionadas, isMultiplayer, isHost, enviarAcaoCliente, dispatch, meuIdx]);
+
+  // Usar carta da Area Segura: funciona até fora do turno (vai direto
+  // pro descarte). Não checa isMinhaVez de propósito.
+  const handleJogarAreaSegura = useCallback((jogadorId, cartaUid) => {
+    const idx = estado.jogadores.findIndex(j => j.id === jogadorId);
+    if (isMultiplayer) {
+      if (isHost) {
+        dispatch({
+          type: 'JOGAR_AREA_SEGURA_N',
+          payload: { jogadorIdx: idx, cartaUid },
+        });
+      } else {
+        enviarAcaoCliente({
+          type: 'JOGAR_AREA_SEGURA_N',
+          payload: { jogadorIdx: idx, cartaUid },
+        });
+      }
+    } else {
+      dispatch({
+        type: 'JOGAR_AREA_SEGURA_N',
+        payload: { jogadorIdx: idx, cartaUid },
+      });
+    }
+  }, [isMultiplayer, isHost, enviarAcaoCliente, dispatch, estado]);
+
+  // ctx opcional: { mapaRoubo, alvoIdx, alvoId } — usado pelo roubo às
+  // cegas para direcionar o alvo e levar os uids escolhidos.
+  const aplicarJogadaRemota = (carta, ctx = {}) => {
+    const mapaRoubo = ctx && ctx.mapaRoubo;
+    const roubarUids = mapaRoubo ? mapaRoubo[carta.uid] || null : null;
+    if (isMultiplayer) {
+      const payload = {
+        jogadorId: jogadorLocal.id,
+        cartaUid: carta.uid,
+        jogadorAlvoId: ctx && ctx.alvoId != null ? ctx.alvoId : null,
+        roubarUids,
+      };
+      if (isHost) {
+        dispatch({ type: 'JOGAR_CARTA_SEM_COMPRA', payload });
+      } else {
+        enviarAcaoCliente({ type: 'JOGAR_CARTA_SEM_COMPRA', payload });
+      }
+    } else {
+      let alvoIdx = ctx && ctx.alvoIdx != null ? ctx.alvoIdx : null;
+      if (alvoIdx == null && carta.precisaAlvo) {
         const vivos = estadoRef.current.jogadores
           .map((j, idx) => ({ ...j, idx }))
           .filter((j) => !j.falido && j.idx !== 0);
@@ -585,7 +747,7 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
           alvoIdx = vivos[Math.floor(Math.random() * vivos.length)].idx;
         }
       }
-      jogarCartaSemComprarN(0, carta.uid, alvoIdx);
+      jogarCartaSemComprarN(0, carta.uid, alvoIdx, roubarUids);
     }
   };
 
@@ -598,64 +760,151 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
     }
   };
 
-  const handleJogarMao = useCallback(() => {
+  // Passa a vez com guarda por chave de turno (evita pass duplicado no
+  // mesmo turno: timer x clique manual x fim da animacao de jogada).
+  const executarPassar = () => {
+    if (passouNesteTurnoRef.current === chaveTimer) return;
+    passouNesteTurnoRef.current = chaveTimer;
+    setCartasSelecionadas([]);
+    setAreaSeguraSelecionadas([]);
+    passarVez();
+  };
+
+  // Timer esgotou: em MP so o host e autoritativo (o cliente aguarda o
+  // sync do estado); no modo local so roda no turno humano.
+  const handleTempoEsgotado = () => {
+    if (isMultiplayer && !isHost) return;
+    if (destaqueRef.current || resultadoRef.current) return;
+    soundManager.playPassTurn();
+    executarPassar();
+  };
+
+  // Executa a jogada da mão (aplica + anima + passa no fim).
+  // ctx: { mapaRoubo, alvoIdx, alvoId } (roubo às cegas).
+  const executarJogadaMao = (cartasParaJogar, ctx) => {
+    setCartasSelecionadas([]);
+    setJogandoEmAndamento(true);
+
+    cartasParaJogar.forEach((c) => aplicarJogadaRemota(c, ctx));
+
+    // Primeiro os destaques em tela: zoom de SUCESSO/FALHA (2s) e,
+    // se a leva tem coringa, o destaque dele (3s) em seguida. SO
+    // DEPOIS as cartas saem da mão pro descarte.
+    const temCoringa = cartasParaJogar.some((c) => c.tipo === TIPO_CARTA.CORINGA);
+    const temNormal = cartasParaJogar.some((c) => c.tipo !== TIPO_CARTA.CORINGA);
+    const esperaZoom = temNormal ? DURACAO_ZOOM_RESULTADO : 0;
+    const esperaCoringa = temCoringa ? DURACAO_DESTAQUE_CORINGA : 0;
+
+    const iniciarSaida = () => {
+      const novasVoadoras = cartasParaJogar.map((carta, i) => {
+        const key = `saida_${i}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        return {
+          key,
+          tipo: 'lift',
+          imgSource: imgPorCarta(carta),
+          deX: posMaoLocal.x + i * 16,
+          deY: posMaoLocal.y - i * 6,
+          paraX: DECKS_POS.descX,
+          paraY: DECKS_POS.descY,
+          duracao: VOO_DURACAO,
+          delay: i * STAGGER_CARTAS,
+          onCompleto: () => setCartasDescarte((prev) => prev.filter((v) => v.key !== key)),
+        };
+      });
+      setCartasDescarte((prev) => [...prev, ...novasVoadoras]);
+
+      const tempoUltimaSaida =
+        (cartasParaJogar.length - 1) * STAGGER_CARTAS + LIFT_DURACAO + VOO_DURACAO + FADE_DURACAO;
+      const atrasoCompra = tempoUltimaSaida + 100;
+
+      setTimeout(() => {
+        setVoadora2({
+          key: `comprar_${Date.now()}`,
+          imgSource: traseiraImg,
+          deX: DECKS_POS.drawX,
+          deY: DECKS_POS.drawY,
+          paraX: posMaoLocal.x,
+          paraY: posMaoLocal.y,
+          duracao: 400,
+          onCompleto: () => {
+            setVoadora2(null);
+            soundManager.playCardDraw();
+            executarPassar();
+            setJogandoEmAndamento(false);
+          },
+        });
+      }, atrasoCompra);
+    };
+
+    const atrasoSaida = esperaZoom + esperaCoringa;
+    if (atrasoSaida > 0) setTimeout(iniciarSaida, atrasoSaida);
+    else iniciarSaida();
+  };
+
+  const handleJogarMao = () => {
     if (!isMinhaVez || cartasSelecionadas.length === 0) return;
 
     const cartasParaJogar = [...cartasSelecionadas];
-    setCartasSelecionadas([]);
 
-    cartasParaJogar.forEach(aplicarJogadaRemota);
+    // Vigarice na seleção? Interrompe e abre o roubo às cegas primeiro.
+    const vigarice = cartasParaJogar.find((c) => c.efeito?.tipo === 'ROUBA_CARTAS');
+    if (vigarice) {
+      const vivos = (estado?.jogadores || [])
+        .map((j, idx) => ({ j, idx }))
+        .filter(({ j, idx }) => !j.falido && idx !== meuIdx);
+      const alvos = vivos
+        .filter(({ j }) => (j.mao || []).length > 0)
+        .map(({ j, idx }) => ({ idx, nome: j.nome, mao: j.mao }));
+      if (alvos.length > 0) {
+        setModalRoubo({
+          cartas: cartasParaJogar,
+          uidCarta: vigarice.uid,
+          quantidade: vigarice.efeito.quantidade || 2,
+          alvos,
+        });
+        return;
+      }
+    }
+    executarJogadaMao(cartasParaJogar, null);
+  };
 
-    const novasVoadoras = cartasParaJogar.map((carta, i) => {
-      const key = `saida_${i}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      return {
-        key,
-        tipo: 'lift',
-        imgSource: imgPorCarta(carta),
-        deX: posMaoLocal.x + i * 16,
-        deY: posMaoLocal.y - i * 6,
-        paraX: DECKS_POS.descX,
-        paraY: DECKS_POS.descY,
-        duracao: VOO_DURACAO,
-        delay: i * STAGGER_CARTAS,
-        onCompleto: () => setCartasDescarte((prev) => prev.filter((v) => v.key !== key)),
-      };
+  const confirmarRouboCego = (alvoIdx, uids) => {
+    const pend = modalRoubo;
+    setModalRoubo(null);
+    if (!pend) return;
+    const jogadorAlvo = (estadoRef.current.jogadores || [])[alvoIdx];
+    executarJogadaMao(pend.cartas, {
+      mapaRoubo: { [pend.uidCarta]: uids },
+      alvoIdx,
+      alvoId: jogadorAlvo ? jogadorAlvo.id : null,
     });
-    setCartasDescarte((prev) => [...prev, ...novasVoadoras]);
+  };
 
-    const tempoUltimaSaida =
-      (cartasParaJogar.length - 1) * STAGGER_CARTAS + LIFT_DURACAO + VOO_DURACAO + FADE_DURACAO;
-    const atrasoCompra = tempoUltimaSaida + 100;
+  // Cancela o modal: as cartas continuam selecionadas (nada jogado).
+  const cancelarRouboCego = () => setModalRoubo(null);
 
-    setTimeout(() => {
-      setVoadora2({
-        key: `comprar_${Date.now()}`,
-        imgSource: traseiraImg,
-        deX: DECKS_POS.drawX,
-        deY: DECKS_POS.drawY,
-        paraX: posMaoLocal.x,
-        paraY: posMaoLocal.y,
-        duracao: 400,
-        onCompleto: () => {
-          setVoadora2(null);
-          soundManager.playCardDraw();
-          passarVez();
-        },
-      });
-    }, atrasoCompra);
-  }, [isMinhaVez, cartasSelecionadas, estado, isMultiplayer, isHost, jogadorLocal, enviarAcaoCliente, dispatch]);
-
-  const handlePassarTurno = useCallback(() => {
+  const handlePassarTurno = () => {
     if (!isMinhaVez) return;
-    setCartasSelecionadas([]);
-    passarVez();
-  }, [isMinhaVez]);
+    // Durante o zoom de resultado ou destaque de coringa o turno nao
+    // pode continuar.
+    if (destaqueRef.current || resultadoRef.current) return;
+    executarPassar();
+  };
 
   const handleResetar = useCallback(() => {
     setBatalhaIniciada(false);
     setCartasSelecionadas([]);
     setCartasDescarte([]);
     setVoadora2(null);
+    setJogandoEmAndamento(false);
+    setModalRoubo(null);
+    destaqueRef.current = false;
+    setDestaqueCoringa(null);
+    resultadoRef.current = false;
+    setZoomResultado(null);
+    resultadoVistoSeqRef.current = 0;
+    pendenciaCoringaRef.current = [];
+    passouNesteTurnoRef.current = null;
     iaAnimacaoProcessada.current = null;
     resetarJogo();
 
@@ -689,7 +938,7 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
   if (isMultiplayer && !estado?.isMultiplayer) {
     return (
       <View style={styles.container}>
-<Image source={bgImg} style={styles.bg} resizeMode="cover" />
+      <FundoMadeira />
         <View style={styles.overlay} />
         <View style={styles.loadingWrap}>
           <Text style={styles.loadingTexto}>SINCRONIZANDO...</Text>
@@ -704,7 +953,7 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
 
   return (
     <Animated.View style={[styles.container, shakeStyle]}>
-      <Image source={bgImg} style={styles.bg} resizeMode="cover" />
+      <FundoMadeira />
       <View style={styles.overlay} />
 
       <TouchableOpacity style={styles.botaoPausa} onPress={() => setModalPausa(true)} activeOpacity={0.7}>
@@ -717,6 +966,17 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
         totalTurnos={estado.totalTurnos ?? 10}
         fluxoDirecao={fluxoDirecao}
         isHumano={isMinhaVez}
+        duracaoTempo={duracaoTimer}
+        chaveTempo={chaveTimer}
+        tempoAtivo={tempoAtivo}
+          tempoPausado={
+            modalPausa ||
+            jogandoEmAndamento ||
+            !!modalRoubo ||
+            !!destaqueCoringa ||
+            !!zoomResultado
+          }
+        onTempoEsgotar={handleTempoEsgotado}
       />
 
       {isMultiplayer ? (
@@ -724,6 +984,13 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
           <View style={styles_1v1.topCenterWrapper}>
             <MaoOponente jogador={outrosJogadores[0]} hideStatus={false} />
           </View>
+          <AreaSegura
+            jogador={outrosJogadores[0]}
+            isMinhaVez={false}
+            onJogarCartaArea={() => {}}
+            cartasSelecionadasArea={[]}
+            topo
+          />
           <View style={styles_1v1.centerDecksWrapper}>
             <DecksArea
               baralho={estado.baralho}
@@ -817,12 +1084,28 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
       )}
 
       {isMinhaVez && cartasSelecionadas.length > 0 && (
-        <Pressable style={styles.botaoJogar} onPress={handleJogarMao}>
-          <Text style={styles.botaoJogarTexto}>JOGAR</Text>
-          <Text style={styles.botaoJogarContador}>
-            {cartasSelecionadas.length}/{MAX_CARTAS_POR_TURNO}
-          </Text>
-        </Pressable>
+        <View style={styles.botoesJogarContainer}>
+          <Pressable style={styles.botaoJogar} onPress={handleJogarMao}>
+            <Text style={styles.botaoJogarTexto}>JOGAR</Text>
+            <Text style={styles.botaoJogarContador}>
+              {cartasSelecionadas.length}/{MAX_CARTAS_POR_TURNO}
+            </Text>
+          </Pressable>
+          <Pressable style={styles.botaoGuardar} onPress={handleColocarAreaSegura}>
+            <Text style={styles.botaoJogarTexto}>GUARDAR</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {areaSeguraVisivel && (
+        <AreaSegura
+          jogador={jogadorLocal}
+          isMinhaVez={isMinhaVez}
+          proprio
+          onJogarCartaArea={handleJogarAreaSegura}
+          cartasSelecionadasArea={areaSeguraSelecionadas}
+          onZoomCarta={(carta) => setCartaZoom(carta)}
+        />
       )}
 
       {cartasDescarte.map((v) => (
@@ -896,6 +1179,12 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
       {!estado.batalhaIniciada && (
         <AnimacaoInicioBatalha
           jogadorAtivoIndex={estado.jogadorAtivoIndex}
+          jogadores={jogadores.map((j, i) => ({
+            nome: j.nome || `JOGADOR ${i + 1}`,
+            avatarSource: getAvatarSourceDoJogador(j, j.idx ?? i),
+            emoji: '👤',
+            cor: j.cor,
+          }))}
           nomeJogador={jogadorLocal?.nome || 'VOCE'}
           nomeOponente={jogadores[meuIdx === 0 ? 1 : 0]?.nome || 'OPONENTE'}
           onCompleto={handleAnimacaoInicioCompleta}
@@ -903,6 +1192,23 @@ function ArenaMultiInterna({ quantidade, onVoltar, multiplayerConfig }) {
       )}
 
       <CartaZoomModal carta={cartaZoom} visivel={!!cartaZoom} onFechar={() => setCartaZoom(null)} />
+
+      <DestaqueCoringa
+        carta={destaqueCoringa?.carta || null}
+        sucesso={destaqueCoringa ? destaqueCoringa.sucesso : null}
+        onFim={fecharDestaque}
+      />
+
+      <ResultadoJogada entradas={zoomResultado} onFim={fecharZoomResultado} />
+
+      <ModalRouboCego
+        visivel={!!modalRoubo}
+        alvos={modalRoubo?.alvos || []}
+        quantidade={modalRoubo?.quantidade || 2}
+        traseiraImg={traseiraImg}
+        onConfirmar={confirmarRouboCego}
+        onCancelar={cancelarRouboCego}
+      />
 
       <ParticleBurst
         x={particlesData.x}
@@ -958,8 +1264,7 @@ export default function ArenaMultiplayer({ quantidade, onVoltar, multiplayerConf
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0A0A1A' },
-  bg: { position: 'absolute', width: '100%', height: '100%' },
-  overlay: { position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.45)' },
+  overlay: { position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.2)' },
 
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingTexto: { color: '#FFD54F', fontSize: 16, fontWeight: 'bold', letterSpacing: 3 },
@@ -1133,22 +1438,36 @@ const styles = StyleSheet.create({
     zIndex: 22,
   },
 
-  botaoJogar: {
+  botoesJogarContainer: {
     position: 'absolute',
     bottom: 8,
     left: 8,
-    backgroundColor: '#2E7D32',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
     zIndex: 30,
     elevation: 6,
-    borderWidth: 2,
-    borderColor: '#66BB6A',
   },
-  botaoJogarTexto: { color: '#FFF', fontWeight: 'bold', fontSize: 16, letterSpacing: 1 },
+   botaoJogar: {
+     backgroundColor: '#2E7D32',
+     borderRadius: 8,
+     paddingHorizontal: 10,
+     paddingVertical: 6,
+     alignItems: 'center',
+     justifyContent: 'center',
+     borderWidth: 2,
+     borderColor: '#66BB6A',
+   },
+   botaoGuardar: {
+     backgroundColor: '#1565C0',
+     borderRadius: 8,
+     paddingHorizontal: 10,
+     paddingVertical: 6,
+     alignItems: 'center',
+     justifyContent: 'center',
+     borderWidth: 2,
+     borderColor: '#42A5F5',
+   },
+   botaoJogarTexto: { color: '#FFF', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 },
   botaoJogarContador: { color: '#C8E6C9', fontSize: 11, marginTop: 2 },
 
   cartaVoadora: {

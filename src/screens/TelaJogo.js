@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
   Alert,
   SafeAreaView
 } from 'react-native';
+import Text from '../components/Texto';
 import Carta from '../components/Carta';
 import {
   criarEstadoJogo,

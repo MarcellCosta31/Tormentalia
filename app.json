@@ -24,7 +24,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      ["@isvend/expo-udp", { "multicast": true }]
+      [
+        "@isvend/expo-udp",
+        {
+          "multicast": true
+        }
+      ],
+      "expo-font"
     ],
     "experiments": {
       "orientation": "landscape"

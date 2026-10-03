@@ -6,14 +6,8 @@ import Animated, {
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
-
-const nossoImg = require('../../assets/cards/nosso.png');
-const toyotinhoImg = require('../../assets/cards/toyotinho.png');
-
-const cardImages = {
-  0: nossoImg,
-  1: toyotinhoImg,
-};
+import { artePorCarta, temArte } from '../../cards/arteCarta';
+import { CartaFaceCompleta } from './CartaFace';
 
 const ZOOM_W = 200;
 const ZOOM_H = 280;
@@ -21,8 +15,7 @@ const CANTO_SIZE = 8;
 
 export default function CartaZoomModal({ carta, visivel, onFechar }) {
   const opacidade = useSharedValue(0);
-  const escala = useSharedValue(0.3);
-  const rotacao = useSharedValue(0);
+  const escala = useSharedValue(0.5);
   const overlayOpacidade = useSharedValue(0);
 
   const overlayStyle = useAnimatedStyle(() => ({
@@ -33,7 +26,6 @@ export default function CartaZoomModal({ carta, visivel, onFechar }) {
     opacity: opacidade.value,
     transform: [
       { scale: escala.value },
-      { rotate: `${rotacao.value}deg` },
     ],
   }));
 
@@ -41,24 +33,21 @@ export default function CartaZoomModal({ carta, visivel, onFechar }) {
     if (visivel) {
       overlayOpacidade.value = 0;
       opacidade.value = 0;
-      escala.value = 0.3;
-      rotacao.value = -5;
+      escala.value = 0.5;
 
-      overlayOpacidade.value = withSpring(1, { damping: 8 });
-      opacidade.value = withSpring(1, { damping: 6, stiffness: 40 });
-      escala.value = withSpring(1, { damping: 6, stiffness: 40 });
-      rotacao.value = withSpring(0, { damping: 8, stiffness: 30 });
+      overlayOpacidade.value = withTiming(1, { duration: 200 });
+      opacidade.value = withTiming(1, { duration: 200 });
+      escala.value = withSpring(1, { damping: 15, stiffness: 120 });
     } else {
       overlayOpacidade.value = withTiming(0, { duration: 200 });
       opacidade.value = withTiming(0, { duration: 200 });
-      escala.value = withTiming(0.5, { duration: 200 });
-      rotacao.value = withTiming(3, { duration: 200 });
+      escala.value = withTiming(0.5, { duration: 150 });
     }
   }, [visivel]);
 
   if (!carta) return null;
 
-  const imgSource = cardImages[carta.uid % 2];
+  const imgSource = artePorCarta(carta);
 
   return (
     <Pressable style={styles.overlay} onPress={onFechar}>
@@ -67,7 +56,11 @@ export default function CartaZoomModal({ carta, visivel, onFechar }) {
         pointerEvents="none"
       />
       <Animated.View style={[styles.zoomCard, cardStyle]}>
-        <Image source={imgSource} style={styles.cartaImg} resizeMode="cover" />
+        {temArte(carta) ? (
+          <Image source={imgSource} style={styles.cartaImg} resizeMode="cover" />
+        ) : (
+          <CartaFaceCompleta carta={carta} style={styles.cartaImg} />
+        )}
 
         <View style={[styles.canto, styles.cantoTL]} />
         <View style={[styles.canto, styles.cantoTR]} />

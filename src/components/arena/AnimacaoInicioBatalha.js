@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Image, StyleSheet, Dimensions } from 'react-native';
+import Text from '../Texto';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -60,26 +61,46 @@ function ConfetePeca({ config, index, startAnim }) {
   return <Animated.View style={style} />;
 }
 
-export default function AnimacaoInicioBatalha({ jogadorAtivoIndex, nomeJogador, nomeOponente, onCompleto }) {
+export default function AnimacaoInicioBatalha({
+  jogadorAtivoIndex,
+  jogadores = [],
+  nomeJogador,
+  nomeOponente,
+  avatarJogadorSource,
+  avatarOponenteSource,
+  onCompleto,
+}) {
   const [fase, setFase] = useState('intro');
   const [completado, setCompletado] = useState(false);
   const [startConfetti, setStartConfetti] = useState(false);
+  const [idxExibido, setIdxExibido] = useState(0);
 
   const overlayOpacity = useSharedValue(0);
   const perguntaOpacity = useSharedValue(0);
   const perguntaScale = useSharedValue(0.5);
-  const moedaScale = useSharedValue(0);
-  const moedaRotation = useSharedValue(0);
-  const resultadoOpacity = useSharedValue(0);
-  const resultadoScale = useSharedValue(0.3);
+  const quadroScale = useSharedValue(0);
+  const quadroRotacao = useSharedValue(0);
+  const revelacaoOpacity = useSharedValue(0);
   const flashOpacity = useSharedValue(0);
   const glowPulse = useSharedValue(0.3);
   const raiosRotation = useSharedValue(0);
   const shakeX = useSharedValue(0);
 
-  const isJogadorHumano = jogadorAtivoIndex === 0;
-  const vencedor = isJogadorHumano ? nomeJogador : nomeOponente;
-  const corTema = isJogadorHumano ? '#4CAF50' : '#FFD54F';
+  // Lista de todos os jogadores da batalha (nome + avatar).
+  const lista = jogadores.length > 0
+    ? jogadores
+    : [
+        { nome: nomeJogador || 'JOGADOR', avatarSource: avatarJogadorSource, emoji: '👤' },
+        { nome: nomeOponente || 'OPONENTE', avatarSource: avatarOponenteSource, emoji: '🤖' },
+      ];
+
+  const escolhidoIdxBruto = Number.isInteger(jogadorAtivoIndex) ? jogadorAtivoIndex : 0;
+  const escolhidoIdx = Math.min(Math.max(escolhidoIdxBruto, 0), lista.length - 1);
+  const escolhido = lista[escolhidoIdx];
+
+  const atual = lista[idxExibido] || escolhido;
+
+  const corTema = escolhido.cor || (escolhidoIdx === 0 ? '#4CAF50' : '#FFD54F');
 
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayOpacity.value,
@@ -104,17 +125,14 @@ export default function AnimacaoInicioBatalha({ jogadorAtivoIndex, nomeJogador, 
     backgroundColor: fase === 'resultado' ? `${corTema}55` : 'rgba(255, 213, 79, 0.3)',
   }));
 
-  const moedaStyle = useAnimatedStyle(() => ({
+  const quadroStyle = useAnimatedStyle(() => ({
     transform: [
-      { scale: moedaScale.value },
-      { rotateY: `${interpolate(moedaRotation.value, [0, 1, 2, 3, 4, 5], [0, 360, 720, 1080, 1440, 1800])}deg` },
+      { scale: quadroScale.value },
+      { rotate: `${quadroRotacao.value}deg` },
     ],
   }));
 
-  const resultadoStyle = useAnimatedStyle(() => ({
-    opacity: resultadoOpacity.value,
-    transform: [{ scale: resultadoScale.value }],
-  }));
+  const revelacaoStyle = useAnimatedStyle(() => ({ opacity: revelacaoOpacity.value }));
 
   useEffect(() => {
     soundManager.init();
@@ -139,26 +157,65 @@ export default function AnimacaoInicioBatalha({ jogadorAtivoIndex, nomeJogador, 
     perguntaScale.value = withSpring(1, { damping: 6, stiffness: 40 });
 
     const timerFase = setTimeout(() => {
-      setFase('flip');
+      setFase('rolling');
     }, 1100);
 
     return () => clearTimeout(timerFase);
   }, []);
 
   useEffect(() => {
-    if (fase !== 'flip') return;
+    if (fase !== 'rolling') return;
 
     perguntaOpacity.value = withTiming(0, { duration: 200 });
 
-    soundManager.playFlip();
-    moedaScale.value = withSpring(1, { damping: 5, stiffness: 60 });
-    moedaRotation.value = withTiming(5, { duration: 1100 });
+    soundManager.playDiceRoll();
+    quadroScale.value = withSpring(1, { damping: 8, stiffness: 90 });
 
-    const timerFase = setTimeout(() => {
-      setFase('resultado');
-    }, 1300);
+    // Quadrado troca de avatar a cada "tranco": comeca rapidissimo e
+    // vai desacelerando ate PARAR no jogador escolhido.
+    const TOTAL_TRANCOS = 16;
+    let trancoAtual = 0;
+    let timeoutId;
 
-    return () => clearTimeout(timerFase);
+    const proximoTranco = () => {
+      trancoAtual++;
+      const progresso = trancoAtual / TOTAL_TRANCOS;
+
+      if (lista.length > 1) {
+        setIdxExibido((prev) => {
+          let novo = Math.floor(Math.random() * lista.length);
+          if (novo === prev) novo = (novo + 1) % lista.length;
+          return novo;
+        });
+      }
+
+      // tranco visual: chacoalha o quadro e volta
+      quadroRotacao.value = withSequence(
+        withTiming((Math.random() - 0.5) * 14, { duration: 55 }),
+        withSpring(0, { damping: 9, stiffness: 140 })
+      );
+      quadroScale.value = withSequence(
+        withTiming(1.05, { duration: 55 }),
+        withSpring(1, { damping: 10, stiffness: 130 })
+      );
+
+      if (trancoAtual < TOTAL_TRANCOS) {
+        const atraso = 40 + progresso * progresso * 300; // 40ms -> ~340ms
+        timeoutId = setTimeout(proximoTranco, atraso);
+      } else {
+        // PARA NO ESCOLHIDO
+        setIdxExibido(escolhidoIdx);
+        quadroScale.value = withSequence(
+          withTiming(1.14, { duration: 90 }),
+          withSpring(1, { damping: 7, stiffness: 90 })
+        );
+        timeoutId = setTimeout(() => setFase('resultado'), 480);
+      }
+    };
+
+    timeoutId = setTimeout(proximoTranco, 150);
+
+    return () => clearTimeout(timeoutId);
   }, [fase]);
 
   useEffect(() => {
@@ -175,19 +232,19 @@ export default function AnimacaoInicioBatalha({ jogadorAtivoIndex, nomeJogador, 
       withTiming(0, { duration: 40 })
     );
 
+    revelacaoOpacity.value = withTiming(1, { duration: 300 });
+
     setStartConfetti(true);
 
     flashOpacity.value = withSequence(
       withTiming(0.85, { duration: 90 }),
       withTiming(0, { duration: 250 })
     );
-    resultadoScale.value = withSpring(1, { damping: 5, stiffness: 50 });
-    resultadoOpacity.value = withTiming(1, { duration: 300 });
 
     const timerFase = setTimeout(() => {
       overlayOpacity.value = withTiming(0, { duration: 500 });
       setTimeout(() => setCompletado(true), 500);
-    }, 1800);
+    }, 2200);
 
     return () => clearTimeout(timerFase);
   }, [fase]);
@@ -227,14 +284,23 @@ export default function AnimacaoInicioBatalha({ jogadorAtivoIndex, nomeJogador, 
         </Animated.View>
       )}
 
-      {(fase === 'flip' || fase === 'resultado') && (
-        <View style={styles.moedaContainer}>
+      {(fase === 'rolling' || fase === 'resultado') && (
+        <View style={styles.quadroContainer}>
           <Animated.View style={[styles.glow, glowStyle]} />
-          <Animated.View style={[styles.moeda, moedaStyle]}>
-            <View style={styles.moedaBorda}>
-              <View style={styles.moedaMiolo}>
-                <Text style={styles.moedaSimbolo}>
-                  {fase === 'resultado' ? (isJogadorHumano ? '👤' : '🤖') : '$'}
+          <Animated.View style={[styles.quadro, quadroStyle]}>
+            <View style={styles.quadroBorda}>
+              <View style={styles.quadroMiolo}>
+                {atual?.avatarSource ? (
+                  <Image
+                    source={atual.avatarSource}
+                    style={styles.quadroAvatar}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text style={styles.quadroEmoji}>{atual?.emoji || '👤'}</Text>
+                )}
+                <Text style={styles.quadroNome} numberOfLines={1}>
+                  {atual?.nome || ''}
                 </Text>
               </View>
             </View>
@@ -244,24 +310,16 @@ export default function AnimacaoInicioBatalha({ jogadorAtivoIndex, nomeJogador, 
 
       {fase === 'resultado' && (
         <>
+          <Animated.View
+            style={[styles.revelacaoGlow, revelacaoStyle]}
+            pointerEvents="none"
+          />
+
           <View style={styles.confeteWrapper} pointerEvents="none">
             {CONFETES_CONFIG.map((conf, i) => (
               <ConfetePeca key={i} config={conf} index={i} startAnim={startConfetti} />
             ))}
           </View>
-
-          <Animated.View style={[styles.resultadoContainer, resultadoStyle]}>
-            <View style={[styles.faixaResultado, { borderColor: corTema }]}>
-              <Text style={styles.resultadoLabel}>
-                {isJogadorHumano ? '🎉 COMEÇA' : 'COMEÇA'}
-              </Text>
-              <Text style={[styles.resultadoNome, { color: corTema, textShadowColor: corTema }]}>
-                {vencedor}
-              </Text>
-              <View style={[styles.divisor, { backgroundColor: corTema }]} />
-              <Text style={styles.resultadoSubtitulo}>BOA SORTE!</Text>
-            </View>
-          </Animated.View>
         </>
       )}
     </Animated.View>
@@ -315,97 +373,83 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
   },
-  moedaContainer: {
+  quadroContainer: {
     width: 160,
-    height: 220,
+    height: 180,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 60,
   },
   glow: {
     position: 'absolute',
+    left: -15,
+    top: -5,
     width: 190,
     height: 190,
     borderRadius: 95,
   },
-  moeda: {
-    width: 130,
-    height: 130,
+  quadro: {
+    width: 140,
+    height: 140,
     alignItems: 'center',
     justifyContent: 'center',
     backfaceVisibility: 'hidden',
   },
-  moedaBorda: {
+  quadroBorda: {
     width: '100%',
     height: '100%',
-    borderRadius: 65,
+    borderRadius: 20,
     backgroundColor: '#E8B923',
     borderWidth: 4,
     borderColor: '#FFF3C4',
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 6,
     shadowColor: '#FFD54F',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.9,
     shadowRadius: 14,
     elevation: 12,
   },
-  moedaMiolo: {
-    width: '78%',
-    height: '78%',
-    borderRadius: 55,
-    borderWidth: 2,
-    borderColor: '#FFF3C4',
-    backgroundColor: '#F4C430',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  moedaSimbolo: {
-    fontSize: 46,
-    fontWeight: 'bold',
-    color: '#7A5B00',
-  },
-  confeteWrapper: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  resultadoContainer: {
-    position: 'absolute',
-    bottom: SCREEN_HEIGHT * 0.16,
-    alignItems: 'center',
-    width: '100%',
-  },
-  faixaResultado: {
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 28,
+  quadroMiolo: {
+    flex: 1,
     borderRadius: 14,
     borderWidth: 2,
-    backgroundColor: 'rgba(10, 10, 25, 0.55)',
+    borderColor: '#FFF3C4',
+    backgroundColor: '#1C2238',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  resultadoLabel: {
-    fontSize: 18,
-    color: '#AAA',
+  quadroAvatar: {
+    width: '100%',
+    height: '100%',
+  },
+  quadroEmoji: {
+    fontSize: 56,
+  },
+  quadroNome: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    backgroundColor: 'rgba(0,0,0,0.62)',
+    color: '#FFD54F',
+    fontSize: 12,
     fontWeight: 'bold',
-    letterSpacing: 3,
+    textAlign: 'center',
+    letterSpacing: 1,
   },
-  resultadoNome: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginTop: 6,
-    letterSpacing: 2,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 14,
+  revelacaoGlow: {
+    position: 'absolute',
+    left: '18%',
+    right: '18%',
+    top: '30%',
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255, 213, 79, 0.10)',
   },
-  divisor: {
-    width: 100,
-    height: 2,
-    marginVertical: 12,
-    opacity: 0.6,
-  },
-  resultadoSubtitulo: {
-    fontSize: 14,
-    color: '#888',
-    letterSpacing: 4,
-    fontWeight: 'bold',
+
+  confeteWrapper: {
+    ...StyleSheet.absoluteFillObject,
   },
 });

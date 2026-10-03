@@ -1,17 +1,18 @@
 import React, { useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Modal,
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import Text from '../Texto';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   withSequence,
+  runOnJS,
 } from 'react-native-reanimated';
 
 const { width: W } = Dimensions.get('window');
@@ -42,7 +43,7 @@ function BotaoQuantidade({ quantidade, onPress }) {
       withTiming(1, { duration: 80 }),
       () => {
         'worklet';
-        onPress(quantidade);
+        runOnJS(onPress)(quantidade);
       },
     );
   };

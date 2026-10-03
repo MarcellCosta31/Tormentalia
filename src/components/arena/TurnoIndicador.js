@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Texto';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,10 +8,25 @@ import Animated, {
   withRepeat,
   withSequence,
 } from 'react-native-reanimated';
+import { useTimerTurno } from '../../hooks/useTimerTurno';
 
 const CANTO_SIZE = 6;
+// Aviso discreto: a contagem so aparece quando faltam estes segundos.
+const AVISO_SEGUNDOS = 10;
 
-export default function TurnoIndicador({ nomeJogadorAtivo, turnoAtual, totalTurnos, fluxoDirecao, isHumano }) {
+export default function TurnoIndicador({
+  nomeJogadorAtivo,
+  turnoAtual,
+  totalTurnos,
+  fluxoDirecao,
+  isHumano,
+  // Timer de turno (20s base, com efeitos TEMPO_TURNO)
+  duracaoTempo,
+  chaveTempo,
+  tempoAtivo,
+  tempoPausado,
+  onTempoEsgotar,
+}) {
   const pulseAnim = useSharedValue(1);
 
   const pulseStyle = useAnimatedStyle(() => ({
@@ -27,6 +43,27 @@ export default function TurnoIndicador({ nomeJogadorAtivo, turnoAtual, totalTurn
       false
     );
   }, [nomeJogadorAtivo]);
+
+  const restante = useTimerTurno({
+    chave: chaveTempo,
+    duracao: duracaoTempo,
+    ativo: !!tempoAtivo,
+    pausado: !!tempoPausado,
+    aoEsgotar: onTempoEsgotar,
+  });
+
+  const timerLigado = !!tempoAtivo && typeof duracaoTempo === 'number' && duracaoTempo > 0;
+  const mostrarTempo = timerLigado && restante <= AVISO_SEGUNDOS;
+
+  // Fade-in suave quando o aviso aparece (sem piscar, sem barulho).
+  const avisoOpacidade = useSharedValue(0);
+  useEffect(() => {
+    avisoOpacidade.value = withTiming(mostrarTempo ? 1 : 0, { duration: 350 });
+  }, [mostrarTempo]);
+  const avisoStyle = useAnimatedStyle(() => ({ opacity: avisoOpacidade.value }));
+
+  const razao = Math.max(0, Math.min(1, restante / (duracaoTempo || 1)));
+  const corTempo = razao > 0.5 ? '#66BB6A' : razao > 0.25 ? '#FFD54F' : '#EF5350';
 
   const fluxoLabel = fluxoDirecao === 1 ? '→ DIREITA' : '← ESQUERDA';
   const nomeFormatado = `TURNO DE ${nomeJogadorAtivo}`;
@@ -50,6 +87,22 @@ export default function TurnoIndicador({ nomeJogadorAtivo, turnoAtual, totalTurn
           </Animated.View>
           <Text style={styles.turnoTotal}> / {totalTurnos}</Text>
         </View>
+
+        {timerLigado && (
+          <Animated.View style={[styles.tempoContainer, avisoStyle]}>
+            <Text style={[styles.tempoNumero, { color: corTempo }]}>
+              {Math.ceil(restante)}
+            </Text>
+            <View style={styles.tempoTrilha}>
+              <View
+                style={[
+                  styles.tempoBarra,
+                  { width: `${razao * 100}%`, backgroundColor: corTempo },
+                ]}
+              />
+            </View>
+          </Animated.View>
+        )}
 
         <View style={styles.fluxoContainer}>
           <Text style={styles.fluxoTexto}>{fluxoLabel}</Text>
@@ -151,6 +204,29 @@ const styles = StyleSheet.create({
     color: '#FFD54F',
     fontWeight: 'bold',
     letterSpacing: 0.5,
+  },
+  tempoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 3,
+    gap: 4,
+  },
+  tempoNumero: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    minWidth: 14,
+    textAlign: 'center',
+  },
+  tempoTrilha: {
+    width: 54,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    overflow: 'hidden',
+  },
+  tempoBarra: {
+    height: '100%',
+    borderRadius: 3,
   },
   canto: {
     position: 'absolute',

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, Image, Dimensions } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, ImageBackground, Image, Dimensions } from 'react-native';
+import Text from '../components/Texto';
 import { getAvatarById } from '../utils/avatar';
 import ModalSelecionarJogadores from '../components/arena/ModalSelecionarJogadores';
 
@@ -11,7 +12,17 @@ const MenuButton = ({ source, onPress, style }) => (
   </TouchableOpacity>
 );
 
-const TelaInicial = ({ onIniciarJogo, onMultiplayer, onConfiguracoes, onSobre, onSair, onPerfil, perfil, onArena }) => {
+const TelaInicial = ({
+  onIniciarJogo,
+  onMultiplayer,
+  onConfiguracoes,
+  onSobre,
+  onSair,
+  onPerfil,
+  perfil,
+  onArena,
+  onTutorial,
+}) => {
   const [modalArenaVisivel, setModalArenaVisivel] = useState(false);
 
   const handleSelecionarQuantidade = (quantidade) => {
@@ -71,6 +82,17 @@ const TelaInicial = ({ onIniciarJogo, onMultiplayer, onConfiguracoes, onSobre, o
       >
         <Text style={styles.botaoArenaEmoji}>⚔️</Text>
         <Text style={styles.botaoArenaTexto}>ARENA</Text>
+      </TouchableOpacity>
+
+      {/* Botao de Tutorial flutuante (canto inferior esquerdo) */}
+      <TouchableOpacity
+        style={styles.botaoTutorial}
+        onPress={onTutorial}
+        activeOpacity={0.8}
+        accessibilityLabel="Abrir tutorial"
+      >
+        <Text style={styles.botaoTutorialEmoji}>📖</Text>
+        <Text style={styles.botaoTutorialTexto}>TUTORIAL</Text>
       </TouchableOpacity>
 
       {/* Modal seleção de jogadores */}
@@ -138,6 +160,34 @@ const styles = StyleSheet.create({
   botaoImagem: {
     width: '100%',
     height: '100%',
+  },
+  // Botão tutorial flutuante (canto inferior esquerdo)
+  botaoTutorial: {
+    position: 'absolute',
+    bottom: SCREEN_HEIGHT * 0.04,
+    left: SCREEN_WIDTH * 0.04,
+    backgroundColor: 'rgba(10,10,26,0.9)',
+    borderWidth: 2,
+    borderColor: '#7E57C2',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    alignItems: 'center',
+    zIndex: 20,
+    shadowColor: '#7E57C2',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  botaoTutorialEmoji: {
+    fontSize: 22,
+  },
+  botaoTutorialTexto: {
+    color: '#B39DDB',
+    fontSize: 10,
+    letterSpacing: 2,
+    marginTop: 2,
   },
   // Botão arena flutuante (canto inferior direito)
   botaoArena: {

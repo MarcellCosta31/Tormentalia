@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   TextInput,
   ScrollView,
   TouchableOpacity,
@@ -9,6 +8,7 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
+import Text, { FONTE } from '../components/Texto';
 import * as Network from 'expo-network';
 import { startListening, stopListening, cleanExpiredRooms } from '../multiplayer/discovery';
 
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     color: '#fff',
     fontSize: 13,
-    fontWeight: 'bold',
+    fontFamily: FONTE,
     letterSpacing: 1,
     paddingHorizontal: 12,
     shadowColor: CYAN,

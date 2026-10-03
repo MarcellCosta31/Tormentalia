@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Text from '../Texto';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -115,7 +116,6 @@ const styles = StyleSheet.create({
   texto: {
     fontSize: 20,
     fontWeight: 'bold',
-    fontFamily: 'monospace',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },

@@ -9,7 +9,7 @@ function encontrarAlvo(jogadores, idxJogador) {
   return alvo.idx;
 }
 
-export function useIAMulti(estado, dispatch) {
+export function useIAMulti(estado, dispatch, pausadoRef = null) {
   const timeoutsRef = useRef([]);
   const executandoRef = useRef(false);
   const ultimoTurnoRef = useRef(null);
@@ -46,7 +46,21 @@ export function useIAMulti(estado, dispatch) {
     timeoutsRef.current.forEach((t) => clearTimeout(t));
     timeoutsRef.current = [];
 
-    const t1 = setTimeout(() => {
+    // Agenda uma etapa da sequencia. Se houver destaque de coringa em
+    // andamento, reaguarda (300ms) ate o destaque terminar.
+    const agendar = (fn, ms) => {
+      const t = setTimeout(function tentar() {
+        if (pausadoRef && pausadoRef.current) {
+          const tp = setTimeout(tentar, 300);
+          timeoutsRef.current.push(tp);
+        } else {
+          fn();
+        }
+      }, ms);
+      timeoutsRef.current.push(t);
+    };
+
+    agendar(() => {
       const estadoAtual = estadoRef.current;
       const idxAtual = idxRef.current;
       const jogadorAtivo = estadoAtual.jogadores[idxAtual];
@@ -56,34 +70,26 @@ export function useIAMulti(estado, dispatch) {
         dispatch({ type: 'IA_N_JOGAR_CARTA', payload: { jogadorIdx: idxAtual, cartaUid: carta.uid, alvoIdx } });
       }
 
-      const t2 = setTimeout(() => {
+      agendar(() => {
         dispatch({ type: 'IA_N_COMPRAR_CARTA', payload: { jogadorIdx: idxAtual } });
 
-        const t3 = setTimeout(() => {
-          const estadoAtual = estadoRef.current;
-          const idxAtual = idxRef.current;
-          const jogadorAtual = estadoAtual.jogadores[idxAtual];
+        agendar(() => {
+          const estadoAtual2 = estadoRef.current;
+          const idxAtual2 = idxRef.current;
+          const jogadorAtual = estadoAtual2.jogadores[idxAtual2];
           if (jogadorAtual && !jogadorAtual.falido && jogadorAtual.mao.length > 0) {
             const idxDescarte = Math.floor(Math.random() * jogadorAtual.mao.length);
             const cartaDescarte = jogadorAtual.mao[idxDescarte];
-            dispatch({ type: 'IA_N_DESCARTAR_CARTA', payload: { jogadorIdx: idxAtual, cartaUid: cartaDescarte.uid } });
+            dispatch({ type: 'IA_N_DESCARTAR_CARTA', payload: { jogadorIdx: idxAtual2, cartaUid: cartaDescarte.uid } });
           }
 
-          const t4 = setTimeout(() => {
+          agendar(() => {
             dispatch({ type: 'IA_N_FIM_TURNO' });
             executandoRef.current = false;
           }, 500);
-
-          timeoutsRef.current.push(t4);
         }, 600);
-
-        timeoutsRef.current.push(t3);
       }, 800);
-
-      timeoutsRef.current.push(t2);
     }, 700);
-
-    timeoutsRef.current.push(t1);
 
     return () => {
       timeoutsRef.current.forEach((t) => clearTimeout(t));

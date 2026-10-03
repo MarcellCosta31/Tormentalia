@@ -8,13 +8,13 @@ const CARD_W = 48;
 const CARD_H = 68;
 const OVERLAP = 22;
 
-export default function MaoOponente({ jogador, hideStatus = false }) {
+export default function MaoOponente({ jogador, hideStatus = false, avatarSource }) {
   if (!jogador) return null;
   const numCartas = jogador.mao?.length || 0;
 
   return (
     <View style={styles.container}>
-      {!hideStatus && <PainelStatus nome={jogador.nome} saldo={jogador.saldo} corDestaque="#FFD54F" />}
+      {!hideStatus && <PainelStatus nome={jogador.nome} saldo={jogador.saldo} corDestaque="#FFD54F" avatarSource={avatarSource} />}
 
       <View style={[styles.fanContainer, { width: CARD_W + Math.max(numCartas - 1, 0) * OVERLAP }]}>
         {Array.from({ length: numCartas }).map((_, index) => {
