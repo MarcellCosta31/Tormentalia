@@ -1,0 +1,51 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do jogo
+        uses: actions/checkout@v4
+
+      - name: Montar game.love a partir dos fontes
+        shell: bash
+        run: |
+          find . -type f \
+            ! -path './.git/*' ! -path './.github/*' ! -path './build/*' \
+            ! -path './trailer/*' ! -path './shots/*' \
+            ! -name '*.love' ! -name '*.bat' ! -name '*.ps1' \
+            ! -name 'dbg_*' ! -name 'exe_*' ! -name 'janela_debug.txt' \
+            | sed 's|^\./||' | zip -q game.love -@
+          echo "game.love: $(du -h game.love | cut -f1)"
+
+      - name: Compilar APK/AAB
+        id: apk
+        uses: love-actions/love-actions-android@v2
+        with:
+          app-name: 'Tormentalia'
+          bundle-id: 'com.marcellcosta.tormentalia'
+          love-ref: '11.5'
+          love-package: './game.love'
+          resource-path: './android-res'
+          icon-specifier: '@drawable/tormentalia_icon'
+          product-name: 'tormentalia'
+          version-string: '1.0.0'
+          version-code: '1'
+          output-folder: './dist'
+          keystore-alias: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
+          keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystore-key-password: ${{ secrets.ANDROID_KEYSTORE_KEYPASSWORD }}
+          keystore-store-password: ${{ secrets.ANDROID_KEYSTORE_STOREPASSWORD }}
+
+      - name: Baixar artefatos
+        uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: dist/*
+          if-no-files-found: error

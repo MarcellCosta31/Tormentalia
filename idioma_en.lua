@@ -1,0 +1,273 @@
+-- Dicionario de traducao para o idioma EN. A chave e o texto em portugues
+-- exatamente como aparece no codigo (o texto passa por idioma.tr() nos
+-- pontos de desenho). Chave ausente = o jogo mostra o portugues, entao da
+-- para ir traduzindo tela por tela sem quebrar nada.
+--
+-- Convencao: a chave mantem o portugues como esta escrito no fonte (sem
+-- acentos, maiusculas onde o jogo usa maiusculas). Frases montadas na mao
+-- (prefixo + variavel) traduzem o pedaco fixo com ui.tr() no ponto da
+-- montagem - por isso os prefixos tambem estao aqui.
+local EN = {
+  -- ==================== Tela de CONFIGURACOES ====================
+  ["CONFIGURACOES"] = "SETTINGS",
+  ["VOLUME DA MUSICA"] = "MUSIC VOLUME",
+  ["VOLUME DOS EFEITOS"] = "SOUND EFFECTS VOLUME",
+  ["IDIOMA"] = "LANGUAGE",
+  ["RESETAR PROGRESSO"] = "RESET PROGRESS",
+  ["SIM"] = "YES",
+  ["NAO"] = "NO",
+  ["VOLTAR"] = "BACK",
+  ["DERROTADOS"] = "DEFEATED",
+  ["CICLO I"] = "CYCLE I",
+  ["CICLO 2"] = "CYCLE 2",
+  ["ISSO APAGA OS DERROTADOS E OS SOBERANOS DOS CICLOS"] =
+    "THIS ERASES THE DEFEATED AND THE SOVEREIGNS OF THE CYCLES",
+
+  -- ==================== Menu / geral ====================
+  ["LOJA"] = "SHOP",
+  ["EM BREVE"] = "COMING SOON",
+  ["PACOTES"] = "PACKS",
+  ["JOGADOR_1"] = "PLAYER_1",
+  ["CANCELAR"] = "CANCEL",
+
+  -- ==================== Tela de LOJA ====================
+  ["COMPRAR"] = "BUY",
+  ["COMPRADO"] = "OWNED",
+  ["HABILIDADE:"] = "SKILL:",
+  ["CLIQUE NUM AVATAR PARA VER A HABILIDADE E O TEORICO"] =
+    "CLICK AN AVATAR TO SEE THE SKILL AND THE THEORETICAL",
+  ["PACOTES DE CARTAS"] = "CARD PACKS",
+
+  -- ==================== Mesa de jogo (batalha) ====================
+  ["TURNO"] = "TURN",
+  ["VEZ"] = "TURN",
+  ["SALDO:"] = "BALANCE:",
+  ["SALDO"] = "BALANCE",
+  ["SALDO OCULTO"] = "HIDDEN BALANCE",
+  ["LOG DE COMBATE"] = "COMBAT LOG",
+  ["RESULTADO DA JOGADA"] = "PLAY RESULT",
+  ["ELIMINADO!"] = "ELIMINATED!",
+  ["PROXIMO OPONENTE"] = "NEXT OPPONENT",
+  ["JOGAR NOVAMENTE"] = "PLAY AGAIN",
+  ["VOLTAR AO MENU"] = "BACK TO MENU",
+  ["PAUSA"] = "PAUSED",
+  ["LIVRO-CAIXA (HISTORICO)"] = "CASH BOOK (HISTORY)",
+  ["RECEITAS"] = "REVENUE",
+  ["DESPESAS"] = "EXPENSES",
+  ["LUCRO"] = "PROFIT",
+  ["ULTIMOS MOVIMENTOS"] = "RECENT MOVEMENTS",
+  ["CONTINUAR"] = "CONTINUE",
+  ["SUCESSO"] = "SUCCESS",
+  ["FALHA"] = "FAILURE",
+  ["GREVE!"] = "STRIKE!",
+  ["SATISFACAO"] = "SATISFACTION",
+  ["PRODUTIVIDADE %+.0f%%"] = "PRODUCTIVITY %+.0f%%",
+  ["ALVO:"] = "TARGET:",
+  ["DESCRICAO"] = "DESCRIPTION",
+  ["EFEITO"] = "EFFECT",
+  ["DURACAO"] = "DURATION",
+  ["TURNO DE"] = "TURN OF",
+  ["PARA A ESQUERDA"] = "TO THE LEFT",
+  ["COMPRA"] = "BUY",
+  ["DESCARTE"] = "DISCARD",
+  ["MAO"] = "HAND",
+  ["DEFESA"] = "DEFENSE",
+  ["USAR"] = "USE",
+  ["SOLTAR PARA PASSAR"] = "DROP TO PASS",
+  ["VAZIA"] = "EMPTY",
+  ["FALIU"] = "BANKRUPT",
+  ["CLIQUE NO DESCARTE PARA USAR:"] = "CLICK THE DISCARD TO USE:",
+  ["SELECIONE O ALVO PARA:"] = "SELECT THE TARGET FOR:",
+  ["TESTE: ADAM VENCE"] = "TEST: ADAM WINS",
+  ["TESTE: VOCE VENCE"] = "TEST: YOU WIN",
+  ["FUNDO:"] = "BACKGROUND:",
+
+  -- Visor de curingas / eventos da mesa (meta.lua)
+  ["JOGADAS"] = "PLAYS",
+  ["CURINGA"] = "JOKER",
+  ["LUCRO %sR$ %d"] = "PROFIT %sR$ %d",
+  ["CURINGA GLOBAL:"] = "GLOBAL JOKER:",
+  ["USADOS:"] = "USED:",
+  ["DEUS MERCADO SORTEIA O CURINGA GLOBAL"] =
+    "GOD MARKET DRAWS THE GLOBAL JOKER",
+  ["CURINGA GLOBAL SORTEADO"] = "GLOBAL JOKER DRAWN",
+  ["A MAO DO DEUS MERCADO APONTOU PARA A CARTA"] =
+    "THE GOD MARKET'S HAND POINTED AT THE CARD",
+  ["A MAO DO DEUS MERCADO ESTA ESCOLHENDO..."] =
+    "THE GOD MARKET'S HAND IS CHOOSING...",
+  ["VISOR DE CURINGAS"] = "JOKER VIEWER",
+  ["ANTERIORES"] = "PREVIOUS",
+  [": (vazio)"] = ": (empty)",
+
+  -- Leilao / lojinha / fusao (meta.lua)
+  ["LEILAO DO DEUS MERCADO"] = "GOD MARKET AUCTION",
+  ["Seu saldo:"] = "Your balance:",
+  ["KIT DE"] = "PACK OF",
+  ["CARTA UNICA"] = "SINGLE CARD",
+  ["SEU LANCE:"] = "YOUR BID:",
+  ["MAIOR LANCE:"] = "HIGHEST BID:",
+  ["SEU LANCE"] = "YOUR BID",
+  ["RESULTADO DO LEILAO"] = "AUCTION RESULT",
+  ["LEVOU O PRODUTO INTEIRO"] = "TOOK THE WHOLE PRODUCT",
+  ["NINGUEM LANCOU O SUFICIENTE"] = "NO BID WAS HIGH ENOUGH",
+  ["VOLTANDO PARA A MESA..."] = "RETURNING TO THE TABLE...",
+  ["A LOJINHA ABRE EM INSTANTES..."] = "THE SHOP OPENS IN A MOMENT...",
+  ["LOJINHA DO DEUS MERCADO"] = "GOD MARKET SHOP",
+  ["VENDIDA:"] = "SOLD:",
+  ["FUSAO DE CARTAS"] = "CARD FUSION",
+  ["Selecione de"] = "Select from",
+  ["cartas (mao ou banco) para criar uma SUPER CARTA"] =
+    "cards (hand or bank) to create a SUPER CARD",
+  ["CARTAS SELECIONADAS:"] = "SELECTED CARDS:",
+  ["SUPER CARTA CRIADA!"] = "SUPER CARD CREATED!",
+  ["NINGUEM"] = "NOBODY",
+  ["AGUARDANDO..."] = "WAITING...",
+  ["CONFIRMAR LANCE"] = "CONFIRM BID",
+  ["CONCLUIR"] = "DONE",
+  ["FUSIONAR"] = "FUSE",
+  ["PULAR"] = "SKIP",
+  ["BANCO"] = "BANK",
+
+  -- Loja (mensagem de compra, montada com o nome do produto)
+  ["JA E SEU"] = "IS YOURS",
+  ["COMPRADO!"] = "PURCHASED!",
+  ["DINHEIRO INSUFICIENTE"] = "NOT ENOUGH MONEY",
+
+  -- Reacao / contra-ataque
+  ["AGUARDANDO REACAO"] = "WAITING FOR REACTION",
+  ["CONTRA-ATACAR!"] = "COUNTERATTACK!",
+  ["DEFENDER OU RECEBER?"] = "DEFEND OR TAKE THE HIT?",
+  ["DEFENDER"] = "DEFEND",
+  ["PASSAR"] = "PASS",
+  ["CURINGA"] = "JOKER",
+  ["RECEBER ATAQUE"] = "TAKE THE HIT",
+  ["ARMAR"] = "ARM",
+  ["DEFESA ARMADA"] = "DEFENSE ARMED",
+  ["REACAO RAPIDA"] = "QUICK REACTION",
+  ["CARTA:"] = "CARD:",
+  ["DEIXAR PASSAR"] = "LET IT PASS",
+  ["REACAO ENVIADA"] = "REACTION SENT",
+  ["CONTRA-ATAQUE:"] = "COUNTERATTACK:",
+
+  -- Popups
+  ["MARX REDISTRUIU"] = "MARX REDISTRIBUTED",
+  ["MAYO NEUTRALIZOU!"] = "MAYO NEUTRALIZED!",
+  ["ESPERE O SEGUNDO JOGADOR"] = "WAIT FOR THE SECOND PLAYER",
+  ["EM REDE: VOLTE E CRIE NOVA SALA"] =
+    "ONLINE: GO BACK AND CREATE A NEW ROOM",
+  ["JOGADOR"] = "PLAYER",
+  ["SAIU DA PARTIDA"] = "LEFT THE MATCH",
+  ["PEDINDO A MAO DO OPONENTE..."] = "ASKING FOR THE OPPONENT'S HAND...",
+
+  -- Modal do roubo as cegas
+  ["VIGARICE!"] = "SWINDLE!",
+  ["Escolha ate"] = "CHOOSE UP TO",
+  ["cartas do oponente"] = "OPPONENT'S CARDS",
+  ["Mao:"] = "Hand:",
+  ["cartas"] = "cards",
+  ["Alvo:"] = "Target:",
+  ["ROUBAR"] = "STEAL",
+
+  -- Fim da partida
+  ["EMPATE!"] = "DRAW!",
+  ["VENCEU!"] = "WON!",
+  ["VOCE VENCEU!"] = "YOU WON!",
+  ["OPONENTE VENCEU!"] = "OPPONENT WON!",
+  ["VOCE PERDEU"] = "YOU LOST",
+  ["VITORIA"] = "VICTORY",
+  ["DERROTA"] = "DEFEAT",
+  ["VENCEDOR"] = "WINNER",
+  ["TENTAR DE NOVO"] = "TRY AGAIN",
+  ["PROXIMO OPONENTE"] = "NEXT OPPONENT",
+  ["FIM DA PARTIDA"] = "MATCH OVER",
+  ["O mercado te derrotou"] = "The market defeated you",
+  ["Voce dominou o mercado"] = "You dominated the market",
+  ["O mercado decidiu por empate"] = "The market called it a draw",
+  ["Vitoria por Eliminacao!"] = "Victory by Elimination!",
+  ["Vitoria por Tempo: Maior saldo!"] = "Victory by Time: Highest balance!",
+  ["Empate: Ambos faliram!"] = "Draw: Both went bankrupt!",
+  ["Empate: Todos faliram!"] = "Draw: Everyone went bankrupt!",
+  ["Empate: Saldo identico!"] = "Draw: Identical balance!",
+
+  -- ==================== MULTIPLAYER ====================
+  ["MADEIRA"] = "WOOD",
+  ["TOQUE NA MINIATURA PARA TROCAR"] = "TAP THE THUMBNAIL TO CHANGE",
+  ["ENVIAR"] = "SEND",
+  ["ESCREVA AQUI..."] = "TYPE HERE...",
+  ["CHAT DA SALA"] = "ROOM CHAT",
+  ["TODOS NA SALA VEEM  -  ENTER ENVIA"] =
+    "EVERYONE IN THE ROOM SEES IT  -  ENTER SENDS",
+  ["NENHUMA MENSAGEM AINDA."] = "NO MESSAGES YET.",
+  ["PARTIDA INICIANDO"] = "MATCH STARTING",
+  ["aguarde o anfitriao abrir a mesa..."] =
+    "wait for the host to open the table...",
+  ["SALA DE ESPERA"] = "WAITING ROOM",
+  ["SEU IP:"] = "YOUR IP:",
+  ["PORTA"] = "PORT",
+  ["CONECTADO AO ANFITRIAO"] = "CONNECTED TO THE HOST",
+  ["Partida local na rede (2 a 8 jogadores)"] =
+    "Local network match (2 to 8 players)",
+  ["CONECTANDO A"] = "CONNECTING TO",
+  ["PREENCHER COM IA:"] = "FILL WITH AI:",
+  ["DIFICULDADE DA IA:"] = "AI DIFFICULTY:",
+  ["FACIL"] = "EASY",
+  ["MEDIA"] = "MEDIUM",
+  ["DIFICIL"] = "HARD",
+  ["INICIAR"] = "START",
+  ["SAIR DA SALA"] = "LEAVE ROOM",
+  ["PRONTO"] = "READY",
+  ["PRONTO (SIM)"] = "READY (YES)",
+  ["PRONTO (NAO)"] = "READY (NO)",
+  ["AGUARDANDO O ANFITRIAO INICIAR..."] = "WAITING FOR THE HOST TO START...",
+  ["PARTIDAS NA REDE - TOQUE PARA ENTRAR"] =
+    "MATCHES ON THE NETWORK - TAP TO JOIN",
+  ["ENTRAR >"] = "JOIN >",
+  ["CRIAR SALA"] = "CREATE ROOM",
+  ["CONECTAR COM IP"] = "CONNECT BY IP",
+  ["TOQUE NUMA PARTIDA DA LISTA OU DIGITE O IP NA MESMA REDE."] =
+    "TAP A MATCH ON THE LIST OR TYPE THE IP ON THE SAME NETWORK.",
+  ["ex.: 192.168.0.10"] = "e.g. 192.168.0.10",
+  ["CONECTAR"] = "CONNECT",
+  ["CONECTANDO..."] = "CONNECTING...",
+  ["DESCONECTADO DO ANFITRIAO"] = "DISCONNECTED FROM THE HOST",
+  ["VOCE SAIU DA SALA"] = "YOU LEFT THE ROOM",
+  ["SALA CHEIA (8 JOGADORES)"] = "ROOM FULL (8 PLAYERS)",
+  ["TEMPO ESGOTADO AO CONECTAR"] = "TIMED OUT WHILE CONNECTING",
+  ["AGUARDE MAIS JOGADORES"] = "WAIT FOR MORE PLAYERS",
+  ["AGUARDANDO JOGADOR..."] = "WAITING FOR PLAYER...",
+  ["IA (PREENCHE AO INICIAR)"] = "AI (FILLS AT START)",
+  ["PROCURANDO PARTIDAS NA REDE..."] = "SEARCHING FOR MATCHES...",
+
+  -- ==================== PERFIL ====================
+  ["PERFIL DO JOGADOR"] = "PLAYER PROFILE",
+  ["RESUMO"] = "SUMMARY",
+  ["AVATARES"] = "AVATARS",
+  ["CARTAS"] = "CARDS",
+  ["SELECIONE"] = "SELECT",
+  ["UMA CARTA"] = "A CARD",
+  ["TODAS AS CARTAS"] = "ALL CARDS",
+  ["TODAS"] = "ALL",
+  ["CARTAS EM BREVE"] = "CARDS COMING SOON",
+  ["DECK ATUAL"] = "CURRENT DECK",
+  ["Nenhuma carta no deck ainda."] = "No cards in the deck yet.",
+  ["EMOTES SELECIONADOS"] = "SELECTED EMOTES",
+  ["CARTAS SELECIONADAS"] = "SELECTED CARDS",
+  ["TODOS OS AVATARES"] = "ALL AVATARS",
+  ["TODOS OS EMOTES"] = "ALL EMOTES",
+  ["CONFIRMAR"] = "CONFIRM",
+  ["EQUIPADOS"] = "EQUIPPED",
+
+  -- ==================== SELECAO / ARENA ====================
+  ["SOBERANO"] = "SOVEREIGN",
+  ["PROXIMO"] = "NEXT",
+  ["TOQUE NUM CIRCULO - NO CENTRO PARA O DUELO"] =
+    "TAP A CIRCLE - THE CENTER FOR THE DUEL",
+  ["Quantos jogadores?"] = "How many players?",
+  ["DUELO"] = "DUEL",
+  ["BATALHA"] = "BATTLE",
+  ["GUERRA"] = "WAR",
+  ["CAOS TOTAL"] = "TOTAL CHAOS",
+  ["SIMULAR PARTIDA"] = "SIMULATE MATCH",
+}
+
+return EN

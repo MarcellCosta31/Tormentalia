@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tormentalia – Background do Menu</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #07030f; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #erro { display: none; color: #ccc; font: 16px sans-serif; padding: 2rem; }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div id="erro">WebGL não está disponível neste navegador.</div>
+
+<script>
+/* ============ CONFIGURAÇÃO (altere aqui) ============ */
+const CONFIG = {
+  duracao: 16,          // segundos por loop (12–20). Menor = mais rápido
+  direcao: 1,           // 1 = horário, -1 = anti-horário
+  torcao: 1.6,          // intensidade do redemoinho (torção do centro p/ bordas)
+  distorcao: 1.0,       // quantidade de distorção líquida
+  azul: 1.0,            // intensidade das correntes azuis
+  laranja: 1.0,         // intensidade dos veios/manchas laranjas
+  roxo: 1.0,            // intensidade do roxo dominante
+  centroEscuro: 0.7,    // 0 = sem escurecimento, 1 = centro quase preto
+  escalaRender: 1.0     // 1 = resolução total; 0.5 = metade (mais leve)
+};
+
+/* ============ SHADER ============ */
+const VERT = `attribute vec2 p; void main(){ gl_Position = vec4(p,0.,1.); }`;
+
+const FRAG = `
+precision highp float;
+uniform vec2  uRes;
+uniform float uPhase, uDir, uTwist, uWarp, uBlue, uOrange, uPurple, uCenter;
+const float TAU = 6.28318530718;
+
+// Cores base
+const vec3 PURPLE = vec3(0.208, 0.063, 0.369);  // #35105E
+const vec3 BLUE   = vec3(0.027, 0.333, 0.651);  // #0755A6
+const vec3 ORANGE = vec3(1.000, 0.392, 0.122);  // #FF641F
+const vec3 VOID   = vec3(0.015, 0.006, 0.040);
+const vec3 VIOLET = vec3(0.420, 0.180, 0.780);
+const vec3 ELEC   = vec3(0.140, 0.480, 1.000);
+const vec3 EMBER  = vec3(0.900, 0.170, 0.080);
+
+mat2 rot(float a){ float c=cos(a), s=sin(a); return mat2(c,-s,s,c); }
+float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
+
+void main(){
+  vec2 uv = (gl_FragCoord.xy - 0.5*uRes) / uRes.y;   // centro em (0,0)
+  float r  = length(uv);
+  float ph = uPhase * TAU;                            // 0..2π (todo o tempo é periódico nisso)
+
+  // Redemoinho: rotação global (1 volta por loop) + torção maior perto do centro
+  float ang = -uDir * (ph + uTwist * exp(-r * 1.6));
+  vec2 p = rot(ang) * uv * 2.4;
+
+  // Domain warping: dobra o espaço várias vezes -> aspecto de tinta líquida
+  for (int i = 0; i < 5; i++) {
+    float fi = float(i) + 1.0;
+    float k1 = 1.0 + mod(float(i), 2.0);            // multiplicadores inteiros = loop perfeito
+    float k2 = 2.0 - mod(float(i), 2.0);
+    p += uWarp * (0.75 / fi) * vec2(
+      sin(p.y * (1.0 + 0.35*fi) + ph * k1 + fi * 1.7),
+      cos(p.x * (1.0 + 0.30*fi) - ph * k2 + fi * 2.3)
+    );
+  }
+
+  // Campos de tinta
+  float n1 = 0.5 + 0.5 * sin(p.x * 1.10 + sin(p.y * 1.30 - ph) * 1.5);
+  float n2 = 0.5 + 0.5 * sin(p.y * 1.40 + cos(p.x * 0.90 + ph) * 1.6 + 2.0);
+  float n3 = 0.5 + 0.5 * sin((p.x + p.y) * 1.20 + sin(p.x * 1.70 - 2.0*ph) * 1.2);
+
+  // Roxo domina: da escuridão ao roxo, com toques violeta
+  vec3 col = mix(VOID, PURPLE * uPurple, smoothstep(0.05, 0.75, n1));
+  col = mix(col, VIOLET * 0.55 * uPurple, smoothstep(0.78, 1.0, n1 * n3) * 0.6);
+
+  // Correntes azuis atravessando o roxo
+  float stream = smoothstep(0.52, 0.92, n2) * (0.35 + 0.65 * n3);
+  vec3 blue = mix(BLUE, ELEC, smoothstep(0.80, 1.0, n2));
+  col = mix(col, blue, clamp(stream * 0.85 * uBlue, 0.0, 1.0));
+
+  // Laranja: veios finos + manchas raras (destaque, nunca dominante)
+  float vein = pow(1.0 - abs(n3 * 2.0 - 1.0), 9.0);
+  float blob = smoothstep(0.86, 1.0, n1 * n2 + 0.12 * sin(ph + p.x));
+  float heat = clamp(vein * 0.8 + blob, 0.0, 1.0) * uOrange;
+  col = mix(col, mix(EMBER, ORANGE, smoothstep(0.3, 1.0, heat)), heat * 0.9);
+  col += ORANGE * pow(heat, 3.0) * 0.18;             // brilho quente sutil
+
+  // Profundidade: regiões quase pretas entre as manchas
+  col *= 0.40 + 0.60 * smoothstep(0.10, 0.70, n1 * 0.6 + n2 * 0.4);
+
+  // Composição: centro escuro e calmo, bordas intensas
+  float edge = smoothstep(0.05, 0.85, r);
+  col *= mix(1.0 - 0.88 * uCenter, 1.0, edge);
+  col *= 1.0 + 0.25 * smoothstep(0.55, 1.0, r);      // realça as laterais
+  col *= 1.0 - 0.45 * smoothstep(0.95, 1.45, r);     // vinheta nos cantos
+
+  col += (hash(gl_FragCoord.xy) - 0.5) / 255.0;      // dithering anti-banding
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+/* ============ SETUP WEBGL ============ */
+const canvas = document.getElementById('bg');
+const gl = canvas.getContext('webgl', { antialias: false, alpha: false });
+if (!gl) {
+  canvas.style.display = 'none';
+  document.getElementById('erro').style.display = 'block';
+} else {
+  const compile = (type, src) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
+    return s;
+  };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog); gl.useProgram(prog);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, 'p');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+  const U = n => gl.getUniformLocation(prog, n);
+  const u = { res: U('uRes'), phase: U('uPhase'), dir: U('uDir'), twist: U('uTwist'),
+              warp: U('uWarp'), blue: U('uBlue'), orange: U('uOrange'),
+              purple: U('uPurple'), center: U('uCenter') };
+
+  function resize() {
+    const s = Math.min(window.devicePixelRatio || 1, 2) * CONFIG.escalaRender;
+    const w = Math.max(2, Math.floor(innerWidth * s));
+    const h = Math.max(2, Math.floor(innerHeight * s));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    gl.viewport(0, 0, w, h);
+  }
+  addEventListener('resize', resize); resize();
+
+  const t0 = performance.now();
+  function frame(now) {
+    const phase = (((now - t0) / 1000) / CONFIG.duracao) % 1;   // 0..1 → loop perfeito
+    gl.uniform2f(u.res, canvas.width, canvas.height);
+    gl.uniform1f(u.phase, phase);
+    gl.uniform1f(u.dir, CONFIG.direcao);
+    gl.uniform1f(u.twist, CONFIG.torcao);
+    gl.uniform1f(u.warp, CONFIG.distorcao);
+    gl.uniform1f(u.blue, CONFIG.azul);
+    gl.uniform1f(u.orange, CONFIG.laranja);
+    gl.uniform1f(u.purple, CONFIG.roxo);
+    gl.uniform1f(u.center, CONFIG.centroEscuro);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  window.TormentaliaBG = CONFIG;   // ajuste em tempo real: TormentaliaBG.laranja = 1.5
+}
+</script>
+</body>
+</html>

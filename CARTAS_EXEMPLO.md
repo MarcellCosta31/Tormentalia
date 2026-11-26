@@ -1,4 +1,4 @@
-# 🃏 Exemplo de Cartas - O Caro Deus Mercado
+# 🃏 Exemplo de Cartas - Tormentalia
 
 ## 📊 Cartas Medidas (30 cartas)
 

@@ -1,4 +1,4 @@
-# 🎮 O Caro Deus Mercado - Plano do Jogo
+# 🎮 Tormentalia - Plano do Jogo
 
 ## 📋 Resumo do Conceito
 

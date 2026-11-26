@@ -1,4 +1,4 @@
-# 📋 Regras Atualizadas - O Caro Deus Mercado
+# 📋 Regras Atualizadas - Tormentalia
 
 ## 🎮 Modos de Jogo
 

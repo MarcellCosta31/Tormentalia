@@ -1,1 +1,28 @@
-node_modules
+# Builds do LOVE
+game.love
+*.love
+_build/
+
+# Binarios gerados (nao versionar: sao reconstruidos pelos scripts)
+build/
+*.exe
+*.apk
+*.zip
+
+# Capturas e videos de desenvolvimento
+shots/
+trailer/
+erro.log
+
+# Saidas de testes/capturas temporarias
+anim_test.txt
+final_test*.txt
+test_check9.txt
+probe.txt
+dbg_shot.txt
+shot*.png
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store
