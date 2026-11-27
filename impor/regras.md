@@ -129,9 +129,9 @@ contado; a expiração real vale no modo em rede.
 
 ## 6. Área Segura
 
-- Espaço para **3 cartas** por jogador (`AREA_SEGURA_MAX = 3`), tiradas da
+- Espaço para **1 carta** por jogador (`AREA_SEGURA_MAX = 1`), tirada da
   mão durante o próprio turno.
-- Pode guardar quantas cartas quiser no mesmo turno, até encher os 3 slots.
+- So cabe uma carta guardada: um novo guarda substitui a anterior.
   Guardar não consome quota nem encerra o turno.
 - Jogar a carta guardada **não** consome quota, **não** compra carta e **pode**
   ser usada até fora do próprio turno** (reação). Depois do efeito, vai ao
@@ -361,7 +361,7 @@ O lucro do livro-caixa **não** define o vencedor.
 | `LEILAO_INTERVALO` | 2 rodadas | `jogo.lua` |
 | `LEILAO_SEGUNDOS` | 15 | `jogo.lua` |
 | `LOJINHA_SEGUNDOS` | 15 | `jogo.lua` |
-| `AREA_SEGURA_MAX` | 3 cartas | `jogo.lua` |
+| `AREA_SEGURA_MAX` | 1 carta | `jogo.lua` |
 | `MAX_TURNOS` | 10 | `jogo.lua` |
 
 ## 15. Regras explicitamente fora do protótipo atual ou alteradas de V2 para V7

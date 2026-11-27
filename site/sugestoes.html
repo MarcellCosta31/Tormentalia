@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sugestões — Tormentalia (beta)</title>
+  <meta name="description" content="Envie ideias e sugestões de melhorias para Tormentalia, o card game multiplayer em beta.">
+  <meta name="theme-color" content="#08060d">
+  <meta name="robots" content="index,follow">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="Sugestões — Tormentalia">
+  <meta property="og:description" content="Ajude a melhorar o jogo: envie suas ideias.">
+  <meta property="og:image" content="assets/img/brand/og-cover.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Sugestões — Tormentalia">
+  <meta name="twitter:description" content="Ajude a melhorar o jogo: envie suas ideias.">
+  <meta name="twitter:image" content="assets/img/brand/og-cover.jpg">
+
+  <link rel="icon" href="assets/img/deus_mercado/8.png" sizes="64x64" type="image/png">
+  <link rel="preload" href="assets/fonts/VCR_OSD_MONO.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+  <script defer src="js/firebase-config.js"></script>
+  <script defer src="js/firebase.js"></script>
+  <script defer src="js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+  <svg class="svg-sprite" aria-hidden="true" focusable="false">
+    <symbol id="icon-windows" viewBox="0 0 24 24">
+      <path d="M3 5.5 10.5 4v7H3V5.5Zm0 13L10.5 20v-7H3v5.5ZM11.5 3.7 21 2v9h-9.5V3.7Zm0 8.3H21v9l-9.5-1.7V12Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-android" viewBox="0 0 24 24">
+      <path
+        d="M7.2 8.2h9.6v7.2a1.6 1.6 0 0 1-1.6 1.6h-.8v2.4a1.2 1.2 0 1 1-2.4 0V17h-1.2v2.4a1.2 1.2 0 1 1-2.4 0V17h-.8a1.6 1.6 0 0 1-1.6-1.6V8.2h1.2Z"
+        fill="currentColor" stroke="none" />
+      <path d="m7.4 7.2 1.1-2M16.6 7.2l-1.1-2M8.5 10.2h.01M15.5 10.2h.01" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24">
+      <path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+      <path d="M4 12h15m0 0-5-5m5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24">
+      <path d="M20 12H5m0 0 5-5m-5 5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24">
+      <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-chevron-down" viewBox="0 0 24 24">
+      <path d="m5 9 7 7 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-menu" viewBox="0 0 24 24">
+      <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24">
+      <path d="m5 12.5 4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-warning" viewBox="0 0 24 24">
+      <path d="M12 3 2.8 20h18.4L12 3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+      <path d="M12 9v5m0 3h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-coin" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+      <path d="M9 8.5h4.2a2.2 2.2 0 0 1 0 4.4H9.6m1.2 0V17m-1.8-8.5V17m4.8 0H9" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-cards" viewBox="0 0 24 24">
+      <rect x="7" y="4" width="11" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"
+        transform="rotate(8 12.5 11.5)" />
+      <rect x="5" y="6" width="11" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"
+        transform="rotate(-8 10.5 13.5)" />
+      <path d="M10.5 10.2c.7-1 2.1-.4 2.1.6 0 1.3-2.1 2.4-2.1 2.4s-2.1-1.1-2.1-2.4c0-1 1.4-1.6 2.1-.6Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-gavel" viewBox="0 0 24 24">
+      <path d="m4 20 8-8m-4-4 6 6m-7.5-7.5 3-3 6 6-3 3-6-6Zm5-5 6 6" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24">
+      <path
+        d="M12 20s-7-4.4-7-9.2C5 8.2 7 6.5 9.2 6.5c1.2 0 2.2.6 2.8 1.5.6-.9 1.6-1.5 2.8-1.5 2.2 0 4.2 1.7 4.2 4.3 0 4.8-7 9.2-7 9.2Z"
+        fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24">
+      <circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6" />
+      <path d="M3.5 20c.4-3.4 2.5-5.5 5.5-5.5s5.1 2.1 5.5 5.5M16 5.3a3 3 0 0 1 0 5.4M17.5 14.8c1.9.5 3 2.3 3.3 5.2"
+        fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-crown" viewBox="0 0 24 24">
+      <path d="m4 8 4 3 4-6 4 6 4-3-2 10H6L4 8Z" fill="none" stroke="currentColor" stroke-width="1.6"
+        stroke-linejoin="round" />
+      <path d="M6 21h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24">
+      <path d="M12 3 5 6v5c0 4.5 2.8 8.2 7 10 4.2-1.8 7-5.5 7-10V6l-7-3Z" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linejoin="round" />
+      <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-spark" viewBox="0 0 24 24">
+      <path d="M12 2.5 14 9l6.5 2-6.5 2-2 6.5-2-6.5-6.5-2L10 9l2-6.5Z" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linejoin="round" />
+      <path d="M19 3v3M20.5 4.5h-3M5 17v3M6.5 18.5h-3" fill="none" stroke="currentColor" stroke-width="1.5"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-joker" viewBox="0 0 24 24">
+      <path d="M12 3.5 14.2 9l5.8.5-4.4 3.8 1.3 5.7-4.9-3-4.9 3 1.3-5.7L4 9.5 9.8 9 12 3.5Z" fill="none"
+        stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-target" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24">
+      <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+      <path d="m15.5 15.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-wifi" viewBox="0 0 24 24">
+      <path d="M3 9.5a13 13 0 0 1 18 0M6.5 13a8 8 0 0 1 11 0M10 16.5a3 3 0 0 1 4 0" fill="none" stroke="currentColor"
+        stroke-width="1.7" stroke-linecap="round" />
+      <circle cx="12" cy="20" r="1.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24">
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linejoin="round" />
+      <path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 10.5h5" fill="none" stroke="currentColor" stroke-width="1.6"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-gamepad" viewBox="0 0 24 24">
+      <path
+        d="M7.5 7h9A4.5 4.5 0 0 1 21 11.5v3a3 3 0 0 1-5.1 2.1l-1.2-1.2h-5.4l-1.2 1.2A3 3 0 0 1 3 14.5v-3A4.5 4.5 0 0 1 7.5 7Z"
+        fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      <path d="M7 11v4M5 13h4M16.5 12h.01M18.5 14h.01" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-trophy" viewBox="0 0 24 24">
+      <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" fill="none" stroke="currentColor" stroke-width="1.5"
+        stroke-linejoin="round" />
+      <path d="M8 5H4v2a4 4 0 0 0 4 4M16 5h4v2a4 4 0 0 1-4 4M12 13v4M8.5 21h7M9 17h6" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-swords" viewBox="0 0 24 24">
+      <path d="m4 4 7 7m-4 5-3 3m11-11 5-5M9 15l6-6m0 0 5 5M9 15l-4 4" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="m3 3 2.5.5L4.5 6 3 3ZM21 3l-2.5.5L19.5 6 21 3Z" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-quote" viewBox="0 0 24 24">
+      <path
+        d="M9 6C6 7 4.5 9.2 4.5 12.5V18H10v-6H7c0-2 .8-3.4 2.7-4.3L9 6Zm10 0c-3 1-4.5 3.2-4.5 6.5V18H20v-6h-3c0-2 .8-3.4 2.7-4.3L19 6Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-external" viewBox="0 0 24 24">
+      <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none"
+        stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+  </svg>
+
+  <header class="site-header" id="topo">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="Tormentalia — início">
+        <img src="assets/img/deus_mercado/deusmercado_interfereindo.png" alt="" width="44" height="44">
+        <span class="brand-text">TORMENTALIA</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Navegação principal">
+        <a href="index.html">Início</a>
+        <a href="index.html#multiplayer">Multiplayer</a>
+        <a href="manual.html">Manual</a>
+        <a href="cartas.html">Cartas</a>
+        <a href="avatares.html">Avatares</a>
+        <a href="sugestoes.html">Sugestões</a>
+        <a href="index.html#downloads" class="nav-cta">Baixar</a>
+      </nav>
+      <button class="menu-toggle" type="button" aria-controls="nav" aria-expanded="false" aria-label="Abrir menu">
+        <svg class="icon" aria-hidden="true"><use href="#icon-menu"></use></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="conteudo">
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow" data-reveal><span class="eyebrow-dot"></span> Ajude a moldar o jogo · <span class="beta-badge">BETA</span></p>
+        <h1 data-reveal>Mande sua <span class="text-gradient">ideia.</span></h1>
+        <p class="section-lead" data-reveal>O Tormentalia está em <strong>versão beta</strong>: sua opinião vale muito. Conte o que melhorar, o que está bugado ou que carta você inventaria.</p>
+        <div class="page-hero-actions" data-reveal>
+          <a class="btn btn-ghost btn-small" href="index.html">
+            <svg class="icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+            Voltar ao início
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-suggestions">
+      <div class="container">
+        <div class="section-head" data-reveal>
+          <p class="eyebrow">Canal aberto</p>
+          <h2>Sugestões de <span class="text-gradient">melhoria.</span></h2>
+          <p class="section-lead">Preencha o formulário abaixo. As mensagens são enviadas para o nosso banco de ideias quando a conexão estiver ativa.</p>
+        </div>
+
+        <div class="suggestion-layout">
+          <form class="suggestion-form" id="suggestion-form" novalidate data-reveal>
+            <div class="form-row cols-2">
+              <label class="field">
+                <span>Seu nome <small>(opcional)</small></span>
+                <input type="text" id="sugestao-nome" name="nome" maxlength="40" placeholder="Como quer ser chamado?" autocomplete="nickname">
+              </label>
+              <label class="field">
+                <span>Categoria</span>
+                <select id="sugestao-categoria" name="categoria">
+                  <option value="ideia">Ideia nova</option>
+                  <option value="melhoria">Melhoria</option>
+                  <option value="bug">Bug / problema</option>
+                  <option value="arte">Arte e visual</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </label>
+            </div>
+
+            <label class="field">
+              <span>Título</span>
+              <input type="text" id="sugestao-titulo" name="titulo" maxlength="120" required placeholder="Resuma sua ideia em poucas palavras">
+            </label>
+
+            <label class="field">
+              <span>Sua sugestão</span>
+              <textarea id="sugestao-mensagem" name="mensagem" rows="7" maxlength="2000" required placeholder="Explique como funcionaria e por que melhoraria o jogo..."></textarea>
+            </label>
+
+            <div class="form-actions">
+              <button class="btn btn-gold" type="submit" id="sugestao-enviar">
+                <svg class="icon" aria-hidden="true"><use href="#icon-spark"></use></svg>
+                Enviar sugestão
+              </button>
+              <p class="form-status" id="sugestao-status" role="status" aria-live="polite"></p>
+            </div>
+          </form>
+
+          <aside class="suggestion-aside" data-reveal>
+            <div class="aside-card">
+              <span class="mini-icon mini-icon-pink"><svg class="icon" aria-hidden="true"><use href="#icon-warning"></use></svg></span>
+              <h3>Jogo em beta</h3>
+              <p>Estamos testando regras, cartas e interfaces. Bugs e ideias são bem-vindos — cada sugestão ajuda a decidir o que entra na versão final.</p>
+            </div>
+            <div class="aside-card">
+              <span class="mini-icon mini-icon-gold"><svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg></span>
+              <h3>Como ajudar</h3>
+              <p>Seja específico: diga o que aconteceu, o que você esperava e, se possível, em qual modo (duelo, arena ou rede).</p>
+            </div>
+            <div class="aside-card connection-note" id="connection-note">
+              <span class="mini-icon mini-icon-cyan"><svg class="icon" aria-hidden="true"><use href="#icon-wifi"></use></svg></span>
+              <h3>Conexão</h3>
+              <p id="connection-text">Verificando canal de envio...</p>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="assets/img/brand/brand-mark.webp" alt="" width="52" height="52">
+        <div>
+          <strong>TORMENTALIA <span class="beta-badge">BETA</span></strong>
+          <p>Um jogo de cartas sobre capitalismo, teorias e sobrevivência.</p>
+        </div>
+      </div>
+      <nav class="footer-nav" aria-label="Navegação do rodapé">
+        <a href="index.html#jogo">O jogo</a>
+        <a href="index.html#multiplayer">Multiplayer</a>
+        <a href="manual.html">Manual</a>
+        <a href="cartas.html">Cartas</a>
+        <a href="avatares.html">Avatares</a>
+        <a href="sugestoes.html">Sugestões</a>
+        <a href="index.html#downloads">Downloads</a>
+      </nav>
+      <div class="footer-meta">
+        <p>Marcell Costa</p>
+        <p>© 2026 Tormentalia. Todos os direitos reservados.</p>
+        <a class="back-top" href="#topo">Voltar ao topo <span aria-hidden="true">↑</span></a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

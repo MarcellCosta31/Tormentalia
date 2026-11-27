@@ -22,7 +22,7 @@ local ARQ_MUSICA = "config_musica"
 local NOMES = { "clique", "jogar", "guardar", "passar", "turno",
   "vitoria", "derrota", "emoji", "saida", "tempo", "roleta", "festa",
   "passo", "psicar", "uau", "terror", "engracado", "risada", "tensao",
-  "susto" }
+  "susto", "caixa", "escudo", "impacto", "versus" }
 
 -- Ultimo nome pedido (mesmo em MODO_TESTE/mudo: a suite usa para conferir
 -- que um codigo dispara o efeito certo sem depender de audio).
@@ -66,6 +66,21 @@ function M.tocar(nome, vol)
   local s = fontes[nome]
   if not s then return end
   pcall(function()
+    s:setPitch(1)
+    s:setVolume((vol or 1) * volumeEfeitos)
+    s:stop()
+    s:play()
+  end)
+end
+
+-- Toca com pitch escalado (chain: cada link sobe um pouco o tom).
+function M.tocarPitch(nome, pitch, vol)
+  M.ultimo = nome
+  if MODO_TESTE or mudo or not love.audio then return end
+  local s = fontes[nome]
+  if not s then return end
+  pcall(function()
+    s:setPitch(math.max(0.5, math.min(2.5, pitch or 1)))
     s:setVolume((vol or 1) * volumeEfeitos)
     s:stop()
     s:play()
@@ -98,6 +113,7 @@ function M.musica(nome)
   local ok, s = pcall(love.audio.newSource, "sons/" .. nome .. ".wav", "stream")
   if not ok or not s then return end
   s:setLooping(true)
+  s:setPitch(1)
   s:setVolume(0.6 * volumeMusica)
   pcall(function() s:play() end)
   musicaSrc, musicaNome = s, nome
@@ -106,6 +122,15 @@ function M.musica(nome)
   if os.getenv("JOGO_MUSICA_DBG") then
     io.write("[musica] '" .. nome .. "' tocando=" .. tostring(s:isPlaying()) .. "\n")
   end
+end
+
+-- Ajusta o pitch da trilha corrente (musica adaptativa: 1.0 calma,
+-- ~1.08 media, ~1.16 finals). Nao muda o nome nem reinicia a musica.
+function M.musicaIntensidade(fator)
+  if MODO_TESTE or not musicaSrc then return end
+  pcall(function()
+    musicaSrc:setPitch(math.max(0.5, math.min(2, fator or 1)))
+  end)
 end
 
 function M.pararMusica()

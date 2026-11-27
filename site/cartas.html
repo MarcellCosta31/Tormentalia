@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>As 32 cartas — Tormentalia</title>
+  <meta name="description"
+    content="Galeria completa das 32 cartas de Tormentalia: ação, efeito, defesa e curinga, com chance, efeito, alvo e dica de uso de cada uma.">
+  <meta name="theme-color" content="#08060d">
+  <meta name="robots" content="index,follow">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="As 32 cartas — Tormentalia">
+  <meta property="og:description"
+    content="Filtre por classe, busque por nome e abra a ficha completa de cada carta do baralho padrão.">
+  <meta property="og:image" content="assets/img/brand/og-cover.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="As 32 cartas — Tormentalia">
+  <meta name="twitter:description" content="Galeria com filtro, busca e ficha completa das 32 cartas.">
+  <meta name="twitter:image" content="assets/img/brand/og-cover.jpg">
+
+  <link rel="icon" href="assets/img/brand/favicon.png" sizes="64x64" type="image/png">
+  <link rel="preload" href="assets/fonts/VCR_OSD_MONO.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+  <script defer src="js/cards-data.js"></script>
+  <script defer src="js/app.js"></script>
+</head>
+
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+  <!-- ============================================================
+       SPRITE DE ÍCONES
+       ============================================================ -->
+  <svg class="svg-sprite" aria-hidden="true" focusable="false">
+    <symbol id="icon-windows" viewBox="0 0 24 24">
+      <path d="M3 5.5 10.5 4v7H3V5.5Zm0 13L10.5 20v-7H3v5.5ZM11.5 3.7 21 2v9h-9.5V3.7Zm0 8.3H21v9l-9.5-1.7V12Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-android" viewBox="0 0 24 24">
+      <path
+        d="M7.2 8.2h9.6v7.2a1.6 1.6 0 0 1-1.6 1.6h-.8v2.4a1.2 1.2 0 1 1-2.4 0V17h-1.2v2.4a1.2 1.2 0 1 1-2.4 0V17h-.8a1.6 1.6 0 0 1-1.6-1.6V8.2h1.2Z"
+        fill="currentColor" stroke="none" />
+      <path d="m7.4 7.2 1.1-2M16.6 7.2l-1.1-2M8.5 10.2h.01M15.5 10.2h.01" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24">
+      <path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+      <path d="M4 12h15m0 0-5-5m5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24">
+      <path d="M20 12H5m0 0 5-5m-5 5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24">
+      <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-chevron-down" viewBox="0 0 24 24">
+      <path d="m5 9 7 7 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-menu" viewBox="0 0 24 24">
+      <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24">
+      <path d="m5 12.5 4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-warning" viewBox="0 0 24 24">
+      <path d="M12 3 2.8 20h18.4L12 3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+      <path d="M12 9v5m0 3h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-coin" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+      <path d="M9 8.5h4.2a2.2 2.2 0 0 1 0 4.4H9.6m1.2 0V17m-1.8-8.5V17m4.8 0H9" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-cards" viewBox="0 0 24 24">
+      <rect x="7" y="4" width="11" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"
+        transform="rotate(8 12.5 11.5)" />
+      <rect x="5" y="6" width="11" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"
+        transform="rotate(-8 10.5 13.5)" />
+      <path d="M10.5 10.2c.7-1 2.1-.4 2.1.6 0 1.3-2.1 2.4-2.1 2.4s-2.1-1.1-2.1-2.4c0-1 1.4-1.6 2.1-.6Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-gavel" viewBox="0 0 24 24">
+      <path d="m4 20 8-8m-4-4 6 6m-7.5-7.5 3-3 6 6-3 3-6-6Zm5-5 6 6" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24">
+      <path
+        d="M12 20s-7-4.4-7-9.2C5 8.2 7 6.5 9.2 6.5c1.2 0 2.2.6 2.8 1.5.6-.9 1.6-1.5 2.8-1.5 2.2 0 4.2 1.7 4.2 4.3 0 4.8-7 9.2-7 9.2Z"
+        fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24">
+      <circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6" />
+      <path d="M3.5 20c.4-3.4 2.5-5.5 5.5-5.5s5.1 2.1 5.5 5.5M16 5.3a3 3 0 0 1 0 5.4M17.5 14.8c1.9.5 3 2.3 3.3 5.2"
+        fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-crown" viewBox="0 0 24 24">
+      <path d="m4 8 4 3 4-6 4 6 4-3-2 10H6L4 8Z" fill="none" stroke="currentColor" stroke-width="1.6"
+        stroke-linejoin="round" />
+      <path d="M6 21h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24">
+      <path d="M12 3 5 6v5c0 4.5 2.8 8.2 7 10 4.2-1.8 7-5.5 7-10V6l-7-3Z" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linejoin="round" />
+      <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-spark" viewBox="0 0 24 24">
+      <path d="M12 2.5 14 9l6.5 2-6.5 2-2 6.5-2-6.5-6.5-2L10 9l2-6.5Z" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linejoin="round" />
+      <path d="M19 3v3M20.5 4.5h-3M5 17v3M6.5 18.5h-3" fill="none" stroke="currentColor" stroke-width="1.5"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-joker" viewBox="0 0 24 24">
+      <path d="M12 3.5 14.2 9l5.8.5-4.4 3.8 1.3 5.7-4.9-3-4.9 3 1.3-5.7L4 9.5 9.8 9 12 3.5Z" fill="none"
+        stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-target" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24">
+      <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+      <path d="m15.5 15.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-wifi" viewBox="0 0 24 24">
+      <path d="M3 9.5a13 13 0 0 1 18 0M6.5 13a8 8 0 0 1 11 0M10 16.5a3 3 0 0 1 4 0" fill="none" stroke="currentColor"
+        stroke-width="1.7" stroke-linecap="round" />
+      <circle cx="12" cy="20" r="1.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24">
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linejoin="round" />
+      <path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 10.5h5" fill="none" stroke="currentColor" stroke-width="1.6"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-gamepad" viewBox="0 0 24 24">
+      <path
+        d="M7.5 7h9A4.5 4.5 0 0 1 21 11.5v3a3 3 0 0 1-5.1 2.1l-1.2-1.2h-5.4l-1.2 1.2A3 3 0 0 1 3 14.5v-3A4.5 4.5 0 0 1 7.5 7Z"
+        fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      <path d="M7 11v4M5 13h4M16.5 12h.01M18.5 14h.01" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-trophy" viewBox="0 0 24 24">
+      <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" fill="none" stroke="currentColor" stroke-width="1.5"
+        stroke-linejoin="round" />
+      <path d="M8 5H4v2a4 4 0 0 0 4 4M16 5h4v2a4 4 0 0 1-4 4M12 13v4M8.5 21h7M9 17h6" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-swords" viewBox="0 0 24 24">
+      <path d="m4 4 7 7m-4 5-3 3m11-11 5-5M9 15l6-6m0 0 5 5M9 15l-4 4" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="m3 3 2.5.5L4.5 6 3 3ZM21 3l-2.5.5L19.5 6 21 3Z" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-quote" viewBox="0 0 24 24">
+      <path
+        d="M9 6C6 7 4.5 9.2 4.5 12.5V18H10v-6H7c0-2 .8-3.4 2.7-4.3L9 6Zm10 0c-3 1-4.5 3.2-4.5 6.5V18H20v-6h-3c0-2 .8-3.4 2.7-4.3L19 6Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-external" viewBox="0 0 24 24">
+      <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none"
+        stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+  </svg>
+
+  <!-- ============================================================
+       HEADER
+       ============================================================ -->
+  <header class="site-header" id="topo">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="Tormentalia — início">
+        <img src="assets/img/deus_mercado/deusmercado_interfereindo.png" alt="" width="44" height="44">
+        <span class="brand-text">TORMENTALIA</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Navegação principal">
+        <a href="index.html">Início</a>
+        <a href="index.html#multiplayer">Multiplayer</a>
+        <a href="manual.html">Manual</a>
+        <a href="cartas.html">Cartas</a>
+        <a href="avatares.html">Avatares</a>
+        <a href="sugestoes.html">Sugestões</a>
+        <a href="index.html#downloads" class="nav-cta">Baixar</a>
+      </nav>
+      <button class="menu-toggle" type="button" aria-controls="nav" aria-expanded="false" aria-label="Abrir menu">
+        <svg class="icon" aria-hidden="true">
+          <use href="#icon-menu"></use>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="conteudo">
+    <!-- ============================================================
+         CABEÇALHO DA PÁGINA
+         ============================================================ -->
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow" data-reveal><span class="eyebrow-dot"></span> Documentação · Baralho padrão · <span class="beta-badge">BETA</span></p>
+        <h1 data-reveal>As 32 <span class="text-gradient">cartas.</span></h1>
+        <p class="section-lead" data-reveal>Filtre por classe, busque por nome ou efeito e abra a ficha completa de
+          qualquer carta: chance, alvo, duração e a dica de uso.</p>
+        <div class="page-hero-actions" data-reveal>
+          <a class="btn btn-gold btn-small" href="manual.html">
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-book"></use>
+            </svg>
+            Ler o manual
+          </a>
+          <a class="btn btn-ghost btn-small" href="avatares.html">
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-crown"></use>
+            </svg>
+            Ver avatares
+          </a>
+          <a class="btn btn-ghost btn-small" href="index.html">
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-arrow-left"></use>
+            </svg>
+            Voltar ao início
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         GALERIA DE CARTAS
+         ============================================================ -->
+    <section class="section section-cards">
+      <div class="container">
+        <div class="section-head section-head-row" data-reveal>
+          <div>
+            <p class="eyebrow">O baralho</p>
+            <h2>Escolha sua <span class="text-gradient">arma.</span></h2>
+            <p class="section-lead">Quatro classes, 32 cartas e uma regra: toda carta tem chance de falhar.</p>
+          </div>
+          <div class="deck-counts">
+            <span class="deck-count deck-count-acao"><b>4</b> Ação</span>
+            <span class="deck-count deck-count-efeito"><b>17</b> Efeito</span>
+            <span class="deck-count deck-count-defesa"><b>5</b> Defesa</span>
+            <span class="deck-count deck-count-curinga"><b>6</b> Curinga</span>
+          </div>
+        </div>
+
+        <div class="card-toolbar">
+          <div class="filter-group" role="group" aria-label="Filtrar cartas por classe">
+            <button class="filter-btn is-active" type="button" data-filter="all">Todas <span>32</span></button>
+            <button class="filter-btn" type="button" data-filter="acao">Ação <span>4</span></button>
+            <button class="filter-btn" type="button" data-filter="efeito">Efeito <span>17</span></button>
+            <button class="filter-btn" type="button" data-filter="defesa">Defesa <span>5</span></button>
+            <button class="filter-btn" type="button" data-filter="curinga">Curinga <span>6</span></button>
+          </div>
+          <div class="toolbar-right">
+            <label class="search-box">
+              <svg class="icon" aria-hidden="true">
+                <use href="#icon-search"></use>
+              </svg>
+              <span class="sr-only">Buscar carta</span>
+              <input type="search" id="card-search" placeholder="Buscar carta, efeito ou classe…" autocomplete="off">
+            </label>
+            <button class="filter-btn" type="button" id="clear-filters">Limpar</button>
+            <button class="filter-btn" type="button" id="random-card">Carta aleatória</button>
+          </div>
+        </div>
+
+        <p class="filter-status" id="filter-status" role="status" aria-live="polite">32 cartas</p>
+
+        <div class="card-grid" id="card-grid"></div>
+
+        <div class="empty-state" id="card-empty" hidden>
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-search"></use>
+          </svg>
+          <h3>Nenhuma carta encontrada</h3>
+          <p>Tente outro termo ou limpe os filtros para ver o baralho inteiro.</p>
+          <button class="btn btn-ghost" type="button" id="empty-clear">Limpar filtros</button>
+        </div>
+
+        <noscript>
+          <div class="noscript-note">
+            A galeria é montada com JavaScript. Ative o script para ver as 32 cartas — o restante do site funciona
+            normalmente.
+          </div>
+        </noscript>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============================================================
+       MODAL DE CARTA
+       ============================================================ -->
+  <div class="modal" id="card-modal" role="dialog" aria-modal="true" aria-labelledby="card-modal-title" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-dialog">
+      <div class="card-modal-dialog" data-class="acao">
+        <button class="modal-close" type="button" data-close-modal aria-label="Fechar ficha da carta">
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-close"></use>
+          </svg>
+        </button>
+        <button class="modal-nav modal-prev" id="card-prev" type="button" aria-label="Carta anterior">
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-arrow-left"></use>
+          </svg>
+        </button>
+        <button class="modal-nav modal-next" id="card-next" type="button" aria-label="Próxima carta">
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-arrow-right"></use>
+          </svg>
+        </button>
+
+        <figure class="card-modal-art">
+          <img id="card-modal-image" src="assets/img/cards/2.webp" alt="" width="377" height="661">
+        </figure>
+
+        <div class="card-modal-info">
+          <div class="card-modal-top">
+            <span class="class-badge" id="card-modal-class">Efeito</span>
+            <span class="rarity-badge" id="card-modal-rarity">Comum</span>
+          </div>
+          <h2 id="card-modal-title">Toyotinho</h2>
+          <p class="card-modal-subtitle" id="card-modal-subtitle">—</p>
+          <p class="card-modal-description" id="card-modal-description">—</p>
+
+          <div class="effect-box">
+            <span class="effect-label">Efeito</span>
+            <p id="card-modal-effect">—</p>
+            <p class="effect-extra" id="card-modal-extra" hidden></p>
+          </div>
+
+          <dl class="card-meta">
+            <div>
+              <dt>Chance</dt>
+              <dd id="card-modal-chance">—</dd>
+            </div>
+            <div>
+              <dt>Duração</dt>
+              <dd id="card-modal-duration">—</dd>
+            </div>
+            <div>
+              <dt>Alvo</dt>
+              <dd id="card-modal-target">—</dd>
+            </div>
+            <div>
+              <dt>Peso no baralho</dt>
+              <dd id="card-modal-weight">—</dd>
+            </div>
+          </dl>
+
+          <div class="tip-box">
+            <span class="tip-label">Dica de uso</span>
+            <p id="card-modal-tip">—</p>
+          </div>
+
+          <div class="card-modal-footer">
+            <span class="card-modal-index" id="card-modal-index">Carta 01 de 32</span>
+            <button class="btn btn-ghost btn-small" id="card-modal-random" type="button">Carta aleatória</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="assets/img/deus_mercado/deusmercado_interfereindo.png" alt="" width="52" height="52">
+        <div>
+          <strong>TORMENTALIA <span class="beta-badge">BETA</span></strong>
+          <p>Um jogo de cartas sobre capitalismo, teorias e sobrevivência.</p>
+        </div>
+      </div>
+      <nav class="footer-nav" aria-label="Navegação do rodapé">
+        <a href="index.html#jogo">O jogo</a>
+        <a href="index.html#multiplayer">Multiplayer</a>
+        <a href="manual.html">Manual</a>
+        <a href="cartas.html">Cartas</a>
+        <a href="avatares.html">Avatares</a>
+        <a href="sugestoes.html">Sugestões</a>
+        <a href="index.html#downloads">Downloads</a>
+      </nav>
+      <div class="footer-meta">
+        <p>Marcell Costa</p>
+        <p>© 2026 Tormentalia. Todos os direitos reservados.</p>
+        <a class="back-top" href="#topo">Voltar ao topo <span aria-hidden="true">↑</span></a>
+      </div>
+    </div>
+  </footer>
+</body>
+
+</html>

@@ -84,7 +84,7 @@ local LICOES = {
   area = {
     titulo = "AREA SEGURA",
     linhas = {
-      "Aqui embaixo ficam os 3 slots da AREA SEGURA.",
+      "Aqui embaixo fica o slot da AREA SEGURA.",
       "Guardar uma carta nao gasta a sua quota de 2 cartas por turno.",
       "Voce pode jogar uma carta guardada ate fora do seu turno, como reacao.",
       "Use isso para segurar uma defesa ate o momento certo.",
@@ -508,13 +508,11 @@ function O.desenhar()
     ui.txt("1 / 10   JOGADAS  2", ix + 40, iy + 100, 14, TXT, "left", 340)
     ui.txt("PARA A ESQUERDA   PASSAR", ix + 40, iy + 128, 12, TXT, "left", 340)
   elseif fase == "area" then
-    for i = 1, 3 do
-      local cx = ix + 30 + (i - 1) * 130
-      local pulso = (i == 1) and (math.sin(tempo * 2.4) * 0.15 + 0.85) or 1
-      ui.caixa(cx, iy + 60, 110, 90, 8, PAINEL, OURO, 2)
-      cantos(cx, iy + 60, 110, 90, { OURO_SUAVE[1], OURO_SUAVE[2], OURO_SUAVE[3], pulso }, 8, 2, 1.5)
-      ui.txt("SLOT " .. i, cx, iy + 94, 14, OURO, "center", 110)
-    end
+    local pulso = math.sin(tempo * 2.4) * 0.15 + 0.85
+    local cx = ix + 155
+    ui.caixa(cx, iy + 60, 110, 90, 8, PAINEL, OURO, 2)
+    cantos(cx, iy + 60, 110, 90, { OURO_SUAVE[1], OURO_SUAVE[2], OURO_SUAVE[3], pulso }, 8, 2, 1.5)
+    ui.txt("1 SLOT", cx, iy + 94, 14, OURO, "center", 110)
   elseif fase == "defesa" then
     local pulso = math.sin(tempo * 2.2) * 0.25 + 0.75
     local AZUL = ui.hex "#45D6FF"

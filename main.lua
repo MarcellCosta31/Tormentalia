@@ -64,6 +64,10 @@ ui._meta = require "meta"
 ui._layout = require "layout"
 -- Tela preta de carregamento antes da batalha em rede (Deus Mercado andando).
 ui._carga = require "carregamento_rede"
+-- Game feel: Chain visual, particulas, eventos ambientais, surpresa, haptics.
+ui._gf = require "gamefeel"
+-- Memoria de estilo do jogador (IA que aprende depois de 5 partidas).
+ui._iaMem = require "ia_memoria"
 -- Animacoes especiais das cartas Curinga (arte saltando para a frente e a
 -- Probabilidade Mortal andando pela tela): guardado em ui pelo mesmo teto de
 -- 200 locals do LuaJIT.
@@ -88,6 +92,9 @@ local OP_PAINEL_Y = 16
 local OP_MAO_Y = OP_PAINEL_Y + ui.E(34) + 8
 local PLACA_X, PLACA_Y = 16, 34
 local PAUSA = { x = VW - 16 - ui.E(36), y = 16, w = ui.E(36), h = ui.E(36) }
+-- Dica do turno (7.2): botao opcional ao lado da pausa. Fica em ui para nao
+-- estourar o limite de 200 locals do chunk do main.
+ui._dicaRect = { x = PAUSA.x - ui.E(44), y = PAUSA.y, w = ui.E(36), h = ui.E(36) }
 -- Teste (so no duelo classico vs Adam Smith): da a vitoria a ele na hora
 -- para conferir a tela de derrota nova sem jogar o duelo inteiro.
 -- O campo "voce" e o botao irmao (embaixo da placa de turno): vitoria
@@ -99,7 +106,7 @@ local BTN_ADAM_VENCE = { x = ui.E(186), y = 34, w = ui.E(176), h = ui.E(36),
 -- Painel do jogador no base-centro (bottomCenterWrapper, bottom:12, z26).
 local PAINEL_RECT = { x = CENTRO - ui.E(65), y = VH - ui.E(12) - ui.E(34),
   w = ui.E(130), h = ui.E(34) }
--- Área Segura: 3 slots em linha (eram 1 carta só). O slot encolheu um
+-- Área Segura: 1 slot. O slot encolheu um
 -- pouco (46x64dp) para os três caberem na faixa de madeira da direita sem
 -- encostar na mão; a própria fileira fica no rodapé e a do oponente no topo.
 local AREA_L, AREA_A = ui.E(46), ui.E(64)
@@ -627,10 +634,21 @@ local function popupsSaldo(antes)
       util.adicionarPopupSeat(i,
         (d > 0 and "+" or "-") .. "R$ " .. math.abs(d),
         d > 0 and ui.C.SUCESSO or ui.C.FALHA)
+      local x, y = ui._posSeatFx(i)
+      if d > 0 then
+        ui._gf.moedas(x, y, d)
+      else
+        ui._gf.vibrar("medio")
+        ui._fx.direcao(0, 1)
+        ui._fx.bater(0.28)
+      end
+      if j.falido then ui._gf.vibrar("forte") end
     end
   end
 
   if partida.evento then
+    -- Eventos ambientais visuais (2.4): chuva de moedas, crise, volatilidade.
+    ui._gf.evento(partida.evento.nome)
     -- Efeito especial (mao dourada descendo): fica pendente ate o zoom de
     -- resultado fechar para nao tocar escondido atras do banner.
     partida.evento = nil
@@ -668,10 +686,16 @@ end
 
 -- Entrada do zoom de resultado: uma por carta jogada (ResultadoJogada.js).
 local function novaEntrada(res, carta)
+  local c = carta or res.carta
   return {
-    carta = carta or res.carta,
+    carta = c,
     sucesso = res.sucesso,
     chance = tostring(math.floor(((res.chance or 1) * 100) + 0.5)) .. "%",
+    -- Dados para game feel (som por carta,Chain,surpresa,vibracao).
+    chanceNum = res.chance,
+    chainBonus = res.chainBonus,
+    cartaTipo = c and c.tipo or nil,
+    cartaClasse = c and c.classe or nil,
     -- Probabilidade Mortal: assento sorteado (animacao de avanco no main).
     vitimaIdx = res.vitimaIdx,
   }
@@ -683,12 +707,39 @@ local function novoResultadoLote(entradas)
   -- Som de jogada: toca em TODO aparelho que mostra o resultado da leva
   -- (host, quem jogou e quem so assistiu — todos passam por aqui).
   som.tocar("jogar")
+  ui._gf.vibrar("leve")
   -- Animacoes especiais das Curingas: a arte salta para a frente (3s) ou a
   -- Probabilidade Mortal anda pela tela e avanca na vitima (4,9s). O zoom de
   -- resultado fica aberto ate o fim da animacao.
   local durAnim = 0
   for _, e in ipairs(entradas) do
     local c = e.carta
+
+    -- Som individual por tipo de carta (5.3).
+    if e.cartaTipo == "DEFESA" then
+      som.tocar("escudo")
+    elseif e.cartaTipo == "ACAO" or e.cartaTipo == "EFEITO" then
+      if c and (c.alteracaoSaldoBase or 0) > 0 then
+        som.tocar("caixa")
+      elseif c and (c.efeito and c.efeito.tipo) then
+        som.tocar("impacto")
+      end
+    end
+
+    -- Combo Chain: texto com fogo, pitch escalado, shake vertical e vibracao.
+    if (e.chainBonus or 0) >= 2 then
+      som.tocarPitch("jogar", 1 + (e.chainBonus - 1) * 0.18)
+      ui._gf.cadeia(e.chainBonus, CENTRO - 80, VH * 0.30)
+      ui._gf.vibrar("duplo")
+      ui._fx.direcao(0, -1)
+      ui._fx.bater(0.22)
+    end
+
+    -- Momento surpresa: alta chance falha ou baixa chance acerta (1.2).
+    if ui._gf.surpresa(e.chanceNum, e.sucesso, CENTRO, VH * 0.28) then
+      ui._fx.direcao(0, 0)
+    end
+
     if c and ui._curingas.def(c) then
       local ax, ay
       if c.id == 51 and e.vitimaIdx then
@@ -1199,6 +1250,7 @@ end
 -- de 2+ humanos em rede (Fase 2). Sem opts mantem o duelo/AI local.
 local function iniciarJogo(arena, opts)
   anim.limpar()
+  ui._gf.limpar()
   introBat.limpar()
   arenaN = arena
   ui._cicloDuelo = false
@@ -1237,6 +1289,7 @@ local function iniciarJogo(arena, opts)
     if cfgCiclo then
       partida.jogadores[2].nome = cfgCiclo.nome
       partida.jogadores[2].avatar = cfgCiclo.avatar
+      partida.jogadores[2].estilo = cfgCiclo.estilo
       ui._cicloDuelo = true
       ui._cicloArena = selecao.cicloAtual()
       -- Enfrentou o soberano: a partir daqui o retrato dele aparece na
@@ -1244,6 +1297,10 @@ local function iniciarJogo(arena, opts)
       if cfgCiclo.soberano then selecao.registrarChefe() end
     end
   end
+  -- Personalidades por assento e aprendizado do estilo do jogador.
+  jogo.definirEstilos(partida)
+  partida.contraEstilo = ui._iaMem.contra()
+
   -- Simulacao: assento 1 tambem e IA. A flag fica na partida (sem novo
   -- local no main, que esta no limite do LuaJIT) e libera o assento 1 nos
   -- meta-eventos do jogo.lua (leilao/lojinha/fusao).
@@ -1274,6 +1331,7 @@ local function iniciarJogo(arena, opts)
       ativo = partida.vez - 1,
       jogadores = lista,
     })
+    som.tocar("versus")
   end
 end
 
@@ -2374,6 +2432,24 @@ local function guardarSelecionada()
   if redeModo == "host" then transmitirSnapshot() end
 end
 
+-- Dica do turno (7.2): usa a IA do motor para sugerir uma carta da mao.
+local function dicaDoTurno()
+  if not podeAgirAgora() or not partida or partida.fim then return end
+  local idx = jogo.jogadaIA(partida, 1)
+  if not idx then
+    util.adicionarPopup("SEM CARTA RECOMENDADA", CENTRO, VH * 0.25,
+      ui.C.OURO, ui.E(14))
+    return
+  end
+  local c = partida.jogadores[1].mao[idx]
+  if not c then return end
+  selUids = { c.uid }
+  ui._alvoModo, ui._alvoCartaIdx, ui._alvoMapa = nil, nil, nil
+  util.adicionarPopup("DICA: " .. tostring(c.nome), CENTRO, VH * 0.25,
+    ui.C.OURO, ui.E(14))
+  som.tocar("clique")
+end
+
 -- USAR da Área Segura: funciona até fora do turno (handleJogarAreaSegura).
 local function usarAreaSegura()
   if not batalhaIniciada or pausado or modalRoubo or voo or resultado
@@ -2548,8 +2624,13 @@ local function iaMaquina(dt)
     -- chefe); na rede a dificuldade escolhida na sala (partida.difIA)
     -- manda (0.1 facil ate 0.65 dificil).
     local cfg = (ui._cicloDuelo and selecao.dueloAtual()) or partida.difIA
-    if not ia.falido and love.math.random()
-        < (cfg and cfg.guarda or IA_GUARDA_CHANCE) then
+    local chanceGuarda = cfg and cfg.guarda or IA_GUARDA_CHANCE
+    if ia.estilo == "defensivo" then
+      chanceGuarda = math.min(0.95, chanceGuarda + 0.25)
+    elseif ia.estilo == "agressivo" then
+      chanceGuarda = chanceGuarda * 0.4
+    end
+    if not ia.falido and love.math.random() < chanceGuarda then
       local uid = jogo.iaGuardarCarta(partida, vez)
       if uid then
         jogo.colocarAreaSegura(partida, vez, uid)
@@ -2651,7 +2732,7 @@ local function layoutOponente(n)
   return lista
 end
 
--- ÁREA SEGURA (AreaSegura.js): agora são 3 slots em linha, encostados na
+-- ÁREA SEGURA (AreaSegura.js): agora é 1 slot, encostado na
 -- ponta da direita. A própria fica no rodapé (y = VH-12-AREA_A) e a do
 -- oponente no topo (abaixo do botão de pausa); em duelo as duas fileiras
 -- aparecem ao mesmo tempo, uma em cima e outra embaixo.
@@ -2674,7 +2755,7 @@ local function retAreaUsar(slot)
   }
 end
 
--- Slot unico de Defesa: centralizado acima dos 3 slots da Area Segura.
+-- Slot unico de Defesa: centralizado acima do slot da Area Segura.
 -- Mesma geometria usada pelo desenho (meta.desenharPilhas). Dentro de qc
 -- porque o main esta no limite de 200 locals do LuaJIT.
 qc.retSlot = function()
@@ -2793,6 +2874,34 @@ local function moverArrasto(hx, hy)
   if not arrasto then return end
   arrasto.x, arrasto.y = hx, hy
   atualizarAlvoArrasto()
+end
+
+-- Direcao do swipe -> indice do oponente mais alinhado ao gesto.
+ui._alvoPorDirecao = function(dx, dy)
+  if not partida then return nil end
+  local melhor, melhorDot = nil, 0.25
+  local n = math.sqrt(dx * dx + dy * dy)
+  if n <= 0 then return nil end
+  for i = 2, #partida.jogadores do
+    local j = partida.jogadores[i]
+    if not j.falido and not j.saiu then
+      local ax, ay
+      if ehMesa() then
+        local p = posSlot(i)
+        ax, ay = p.cx, p.cy
+      else
+        ax, ay = ui._posSeatFx(i)
+      end
+      local ox, oy = ax - (ui._swipe and ui._swipe.x or 0),
+        ay - (ui._swipe and ui._swipe.y or 0)
+      local m = math.sqrt(ox * ox + oy * oy)
+      if m > 0 then
+        local dot = (dx * ox + dy * oy) / (n * m)
+        if dot > melhorDot then melhor, melhorDot = i, dot end
+      end
+    end
+  end
+  return melhor
 end
 
 local function soltarArrasto()
@@ -3269,6 +3378,11 @@ local function clicado(vx, vy)
     return
   end
 
+  if tela == "jogo" and ui.dentro(vx, vy, ui._dicaRect) then
+    dicaDoTurno()
+    return
+  end
+
   if ui.dentro(vx, vy, PAUSA) then
     pausado = true
     return
@@ -3525,6 +3639,12 @@ local function desenharMao()
           { escala = 1.08, destaque = ui.C.OURO, destaqueAlfa = 0.5,
             dobra = foldUids[cartaArr.uid] or 0 })
         love.graphics.pop()
+        if arrasto.gesto then
+          local rotulo = arrasto.gesto == "guardar" and "GUARDAR"
+            or (arrasto.gesto == "alvo" and "ALVO" or "JOGAR")
+          ui.txtCabe(rotulo, ax - 70, ay - CH / 2 - ui.E(18), 12, 140,
+            ui.C.OURO, "center", 9)
+        end
       end
       return
     end
@@ -3552,8 +3672,10 @@ local function desenharMao()
       love.graphics.push()
       love.graphics.translate(r.x + r.w / 2 + rx, r.y + r.h / 2 + ry)
       love.graphics.rotate(r.rot)
+      local corChain = ui._gf.corBordaMao(partida.jogadores[1].chainBonus or 0)
       ui.carta(carta, -r.w / 2, -r.h / 2, r.w, r.h,
-        { dobra = foldUids[carta.uid] or 0 })
+        { dobra = foldUids[carta.uid] or 0,
+          destaque = corChain, destaqueAlfa = corChain and 0.24 or nil })
       -- Veículo de bloqueio: carta precisa de alvo mas não há oponente vivo.
       if ui.cartaBloqueada(carta, partida, 1) then
         love.graphics.setColor(0, 0, 0, 0.55)
@@ -4084,6 +4206,8 @@ local function desenharJogo(dt)
     and (ui._cicloArena or 1) or (partida and partida.arena)
   local fundoMesa = (chaveArena and arte.arena(chaveArena)) or madeiraCanvas
   ui.imagemCover(fundoMesa, ui.retTelaCheia(VW, VH))
+  -- Particulas/ambiente por trás das cartas (eventos, fumaça de perigo).
+  ui._gf.desenharFundo()
 
   if ehMesa() then
     -- ARENA N >= 3: mesa central atras + slots em elipse (sem pilhas top).
@@ -4148,7 +4272,7 @@ local function desenharJogo(dt)
   local jog = partida.jogadores[1]
 
   -- área segura do oponente (opacity 0.7, AreaSegura isOpponent) — so no duelo.
-  -- Agora sao 3 slots: as cartas guardadas viram versos e os vazios ficam
+  -- Agora e 1 slot: a carta guardada vira verso e o vazio fica
   -- tracejados (o rotulo "VAZIA" so aparece com a area toda vazia).
   if not ehMesa() then
     local op = partida.jogadores[2]
@@ -4183,7 +4307,7 @@ local function desenharJogo(dt)
   ui.barrasStatus(PAINEL_RECT.x - ui.larguraBarrasStatus() - ui.E(6),
     PAINEL_RECT.y, ui.E(34), jog)
 
-  -- Pilha de Defesa: centralizada acima dos 3 slots da Area Segura do jogador.
+  -- Pilha de Defesa: centralizada acima do slot da Area Segura do jogador.
   -- O espaco entre a pilha e os slots fica livre para o botao USAR.
   local rdSlot = qc.retSlot()
   ui._meta.desenharPilhas(partida, VW, VH, rdSlot.x, rdSlot.y)
@@ -4203,13 +4327,14 @@ local function desenharJogo(dt)
 
   -- área segura própria (z26, por cima da mão): o dono vê a FACE da carta
   -- (AreaSegura.js isOwner → CartaArena), seleciona e usa fora do turno.
-  -- 3 slots em linha: o USAR sobe acima do slot selecionado.
+  -- 1 slot: o USAR sobe acima do slot selecionado.
   local areaVazia = #jog.areaSegura == 0
   for i = 1, jogo.AREA_SEGURA_MAX do
     local s = retAreaPropria(i)
     local cartaP = jog.areaSegura[i]
     if cartaP then
       local selP = selAreaUid == cartaP.uid
+      ui._gf.brilhoArea(s.x, s.y, s.w, s.h)
       ui.carta(cartaP, s.x, s.y, s.w, s.h,
         { dobra = 1, destaque = selP and ui.C.OURO or nil })
       if selP then
@@ -4260,6 +4385,12 @@ local function desenharJogo(dt)
       { escala = voo.e })
     love.graphics.pop()
   end
+
+  -- botao de dica do turno (opcional, usa a IA do jogo).
+  local dica = ui._dicaRect
+  ui.caixa(dica.x, dica.y, dica.w, dica.h, ui.E(8),
+    { 0.10, 0.08, 0.03 }, ui.C.OURO, 1.5, 0.92)
+  ui.txt("DICA", dica.x, dica.y + ui.E(12), 9, ui.C.OURO, "center", dica.w)
 
   -- botao pausa
   ui.caixa(PAUSA.x, PAUSA.y, PAUSA.w, PAUSA.h, PAUSA.w / 2,
@@ -4342,6 +4473,8 @@ local function desenharJogo(dt)
     ui._layout.desenhar(seats)
     ui._layout.desenharDebug(seats, ui._layout.arena(vivos, VW, VH))
   end
+  -- Chain/fogo, moedas e SURPRESA por cima de tudo da mesa.
+  ui._gf.desenharFrente()
 end
 
 local function desenharFim(dt)
@@ -6667,6 +6800,9 @@ function love.load()
     love.graphics.setCanvas()
     love.graphics.setLineWidth(1)
     love.event.quit((okLogica and okRender) and 0 or 1)
+  elseif os.getenv("JOGO_TELA") == "intro" then
+    -- Captura/teste da intro de batalha com apresentacao dos jogadores.
+    iniciarJogo(3)
   elseif os.getenv("JOGO_TELA") == "menu" then
     tela = "menu"
   elseif os.getenv("JOGO_TELA") == "config" then
@@ -6971,7 +7107,7 @@ function love.load()
       end
     end
     -- Captura da Área Segura: JOGO_GUARDAR=1 guarda a primeira da mão; =2
-    -- também seleciona a área (exibe o botão USAR); =3 enche os 3 slots.
+    -- também seleciona a área (exibe o botão USAR); =3 enche o slot.
     -- Vem antes do JOGO_SELCARTA para a captura poder mostrar a área cheia
     -- COM uma carta da mão selecionada.
     local guard = tonumber(os.getenv("JOGO_GUARDAR"))
@@ -7171,6 +7307,14 @@ end
 function love.update(dt)
   dt = math.min(dt, 1 / 20)
 
+  -- IA que aprende (8.2): registra o estilo do jogador uma vez por partida.
+  if tela == "fim" and partida and not partida._memoriaRegistrada then
+    partida._memoriaRegistrada = true
+    if not partida.simulacao and not redeModo then
+      ui._iaMem.registrar(ui._iaMem.classificar(partida))
+    end
+  end
+
   -- Tutorial: converte qualquer fim de duelo assistido em vitoria orientada.
   if tela == "fim" and partida and partida.tutorial and ui._onboarding
       and not ui._onboarding.finalizado() then
@@ -7201,6 +7345,21 @@ function love.update(dt)
   ui._impacto.atualizar(dt)
   ui._layout.atualizar(dt)
 
+  -- Game feel: particulas, Chain, eventos, haptics e musica adaptativa.
+  local perigoPerto = false
+  if tela == "jogo" and partida and not partida.fim then
+    local j1 = partida.jogadores[1]
+    local px, py = ui._posSeatFx(1)
+    ui._gf.perigo(1, px, py, (j1.saldo or 0) < 500)
+    local j2 = partida.jogadores[2]
+    if j2 then
+      local ax, ay = ui._posSeatFx(2)
+      ui._gf.perigo(2, ax, ay, (j2.saldo or 0) < 500)
+    end
+    perigoPerto = (j1.saldo or 0) < 500 or (j2 and (j2.saldo or 0) < 500)
+  end
+  ui._gf.atualizar(dt, perigoPerto)
+
   -- Musica de fundo (loop infinito): toca enquanto a tela faz parte do
   -- menu (inclusive paineis por cima dela) e para em intro/fim. Na mesa
   -- roda a musica agitada da batalha; na SELECAO DE CICLOS (um jogador,
@@ -7211,7 +7370,20 @@ function love.update(dt)
   elseif tela == "selecao" then
     som.musica("vento")
   elseif tela == "jogo" then
-    som.musica("batalha")
+    -- Musica adaptativa (5.1): calma no inicio, sobe com a divergencia de
+    -- saldos e fica tensa nos 3 ultimos turnos; silencio + heartbeat no perigo.
+    if perigoPerto then
+      som.pararMusica()
+    else
+      som.musica("batalha")
+      local turno = partida and partida.turno or 1
+      local maxT = partida and partida.maxTurnos or 10
+      local s1 = partida and partida.jogadores[1] and partida.jogadores[1].saldo or 2000
+      local s2 = partida and partida.jogadores[2] and partida.jogadores[2].saldo or 2000
+      local divergencia = math.abs(s1 - s2) / 2000
+      local fator = 1 + (turno > maxT - 3 and 0.16 or (divergencia > 0.5 and 0.08 or 0))
+      som.musicaIntensidade(fator)
+    end
   else
     som.pararMusica()
   end
@@ -7871,6 +8043,9 @@ function love.touchpressed(id, x, y)
   local vx, vy = util.paraVirtual(x, y)
   toqueHover = { id = id, x = vx, y = vy }
   entrada(x, y)
+  if pressCarta and tela == "jogo" then
+    ui._swipe = { id = id, x = vx, y = vy, uid = pressCarta.uid }
+  end
 end
 
 function love.touchmoved(id, x, y)
@@ -7879,6 +8054,26 @@ function love.touchmoved(id, x, y)
   if ui._meta and ui._meta.ativo() then ui._meta.apontar(toqueHover.x, toqueHover.y) end
   if arrasto then
     moverArrasto(toqueHover.x, toqueHover.y)
+    -- Gestos (9.2): up = jogar, down = guardar, direcao do oponente = alvo.
+    if ui._swipe and ui._swipe.id == id and not arrasto.gesto then
+      local dx = toqueHover.x - ui._swipe.x
+      local dy = toqueHover.y - ui._swipe.y
+      local lim = ui.E(48)
+      local dist = math.sqrt(dx * dx + dy * dy)
+      if dist > lim then
+        if dy < -lim and math.abs(dy) > math.abs(dx) * 0.8 then
+          arrasto.gesto = "jogar"
+        elseif dy > lim and math.abs(dy) > math.abs(dx) * 0.8 then
+          arrasto.gesto = "guardar"
+        else
+          local idx = ui._alvoPorDirecao(dx, dy)
+          if idx then
+            arrasto.gesto = "alvo"
+            arrasto.alvoIdx = idx
+          end
+        end
+      end
+    end
   elseif pressCarta then
     if math.abs(toqueHover.x - pressCarta.x) > ui.E(10)
         or math.abs(toqueHover.y - pressCarta.y) > ui.E(10) then
@@ -7890,6 +8085,24 @@ end
 function love.touchreleased(id, x, y)
   if not OS_TOQUE then return end
   if toqueHover and toqueHover.id == id then toqueHover = nil end
+  if arrasto and arrasto.gesto and ui._swipe and ui._swipe.id == id then
+    local gesto = arrasto.gesto
+    local uid = arrasto.uid
+    local alvo = arrasto.alvoIdx
+    arrasto = nil
+    ui._swipe = nil
+    selUids = { uid }
+    if gesto == "guardar" then
+      guardarSelecionada()
+    elseif gesto == "alvo" and alvo then
+      ui._alvoMapa = { [uid] = { tipo = "oponente", idx = alvo } }
+      jogarSelecao()
+    else
+      jogarSelecao()
+    end
+    return
+  end
+  ui._swipe = nil
   solto()
 end
 

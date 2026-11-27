@@ -1,0 +1,62 @@
+TORMENTALIA — ARQUIVOS DE DOWNLOAD
+===========================================
+
+Este diretório contém as distribuições oficiais do jogo.
+
+-----------------------------------------------------------------------
+1) WINDOWS
+-----------------------------------------------------------------------
+Arquivo : Tormentalia-Windows.zip
+Tamanho : 385464155 bytes (367,6 MB)
+SHA-256 : 90AFE4790DF8D3B52C8884AB2EE5CCEAA7E31EA33F1F93DF1E41BCBF5F18F8A8
+
+Como instalar:
+  1. Baixe o ZIP.
+  2. Extraia TODA a pasta (clique com o botão direito > Extrair tudo).
+  3. Rode Tormentalia.exe dentro da pasta extraída.
+
+IMPORTANTE: o .exe não funciona sozinho — ele depende das DLLs que estão
+junto no ZIP. Não copie apenas o executável. Não precisa instalar nada.
+
+Requisitos: Windows 10/11 64-bit, teclado e mouse, ~1 GB de espaço livre.
+
+-----------------------------------------------------------------------
+2) ANDROID
+-----------------------------------------------------------------------
+Arquivo : Tormentalia-release.apk
+Tamanho : 399747233 bytes (381,2 MB)
+SHA-256 : FB90AD4AAA63B56EC7448FFDA8C151E22888DDAA2D83F0C1ABDD417B2FA57D20
+
+Como instalar (sideload):
+  1. Baixe o APK para o celular.
+  2. Na primeira vez, o Android vai pedir permissão para instalar apps
+     desconhecidos. Ative a permissão para o app gerenciador de arquivos
+     (ou navegador) que você usou no download.
+  3. Abra o APK e toque em Instalar.
+
+IMPORTANTE: o APK é assinado, mas distribuído fora da Play Store. Instale
+por sua conta e risco, como qualquer sideload.
+
+Requisitos: Android 5.0 ou superior, ~1 GB de espaço livre.
+
+-----------------------------------------------------------------------
+3) COMO CONFERIR A INTEGRIDADE (SHA-256)
+-----------------------------------------------------------------------
+No Windows (PowerShell):
+
+  Get-FileHash .\Tormentalia-Windows.zip -Algorithm SHA256
+  Get-FileHash .\Tormentalia-release.apk -Algorithm SHA256
+
+No Linux / macOS:
+
+  sha256sum Tormentalia-Windows.zip
+  sha256sum Tormentalia-release.apk
+
+O valor calculado deve ser igual ao listado acima.
+
+-----------------------------------------------------------------------
+4) SOBRE O JOGO
+-----------------------------------------------------------------------
+Tormentalia — card game de estratégia, blefe e sobrevivência.
+2 a 8 jogadores, multiplayer local por Wi-Fi (arena e partida em rede).
+Grátis para Windows e Android. Interface em português (PT-BR).

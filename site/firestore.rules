@@ -1,0 +1,35 @@
+rules_version = '2';
+
+/* ============================================================
+   Regras do Firestore — Tormentalia
+
+   O formulario publico de sugestoes so pode CRIAR documentos
+   na colecao `sugestoes`, com os campos esperados e dentro dos
+   limites de tamanho. Leitura, edicao e exclusao ficam
+   bloqueadas para o publico (use o Console do Firebase).
+   ============================================================ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /sugestoes/{docId} {
+      allow create: if request.resource.data.keys().hasAll(
+          ['nome', 'categoria', 'titulo', 'mensagem', 'criadoEm', 'status', 'versao']
+        )
+        && request.resource.data.keys().hasOnly(
+          ['nome', 'categoria', 'titulo', 'mensagem', 'criadoEm', 'status', 'versao']
+        )
+        && request.resource.data.nome is string
+        && request.resource.data.categoria is string
+        && request.resource.data.titulo is string
+        && request.resource.data.titulo.size() >= 4
+        && request.resource.data.titulo.size() <= 120
+        && request.resource.data.mensagem is string
+        && request.resource.data.mensagem.size() >= 10
+        && request.resource.data.mensagem.size() <= 2000
+        && request.resource.data.criadoEm is string
+        && request.resource.data.status == 'nova'
+        && request.resource.data.versao is string;
+
+      allow read, update, delete: if false;
+    }
+  }
+}

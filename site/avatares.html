@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Avatares — Tormentalia</title>
+  <meta name="description"
+    content="Conheça os três avatares jogáveis de Tormentalia: Frederick Taylor, Karl Marx e Elton Mayo, com habilidade passiva, estilo de jogo e como desbloqueá-los.">
+  <meta name="theme-color" content="#08060d">
+  <meta name="robots" content="index,follow">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="Avatares — Tormentalia">
+  <meta property="og:description"
+    content="Taylor, Marx e Mayo: três habilidades passivas que mudam o seu jeito de jogar.">
+  <meta property="og:image" content="assets/img/brand/og-cover.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Avatares — Tormentalia">
+  <meta name="twitter:description"
+    content="Taylor, Marx e Mayo: três habilidades passivas que mudam o seu jeito de jogar.">
+  <meta name="twitter:image" content="assets/img/brand/og-cover.jpg">
+
+  <link rel="icon" href="assets/img/brand/favicon.png" sizes="64x64" type="image/png">
+  <link rel="preload" href="assets/fonts/VCR_OSD_MONO.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+  <script defer src="js/app.js"></script>
+</head>
+
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+  <!-- ============================================================
+       SPRITE DE ÍCONES
+       ============================================================ -->
+  <svg class="svg-sprite" aria-hidden="true" focusable="false">
+    <symbol id="icon-windows" viewBox="0 0 24 24">
+      <path d="M3 5.5 10.5 4v7H3V5.5Zm0 13L10.5 20v-7H3v5.5ZM11.5 3.7 21 2v9h-9.5V3.7Zm0 8.3H21v9l-9.5-1.7V12Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-android" viewBox="0 0 24 24">
+      <path
+        d="M7.2 8.2h9.6v7.2a1.6 1.6 0 0 1-1.6 1.6h-.8v2.4a1.2 1.2 0 1 1-2.4 0V17h-1.2v2.4a1.2 1.2 0 1 1-2.4 0V17h-.8a1.6 1.6 0 0 1-1.6-1.6V8.2h1.2Z"
+        fill="currentColor" stroke="none" />
+      <path d="m7.4 7.2 1.1-2M16.6 7.2l-1.1-2M8.5 10.2h.01M15.5 10.2h.01" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24">
+      <path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+      <path d="M4 12h15m0 0-5-5m5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24">
+      <path d="M20 12H5m0 0 5-5m-5 5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24">
+      <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-chevron-down" viewBox="0 0 24 24">
+      <path d="m5 9 7 7 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-menu" viewBox="0 0 24 24">
+      <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24">
+      <path d="m5 12.5 4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-warning" viewBox="0 0 24 24">
+      <path d="M12 3 2.8 20h18.4L12 3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+      <path d="M12 9v5m0 3h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-coin" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+      <path d="M9 8.5h4.2a2.2 2.2 0 0 1 0 4.4H9.6m1.2 0V17m-1.8-8.5V17m4.8 0H9" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-cards" viewBox="0 0 24 24">
+      <rect x="7" y="4" width="11" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"
+        transform="rotate(8 12.5 11.5)" />
+      <rect x="5" y="6" width="11" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"
+        transform="rotate(-8 10.5 13.5)" />
+      <path d="M10.5 10.2c.7-1 2.1-.4 2.1.6 0 1.3-2.1 2.4-2.1 2.4s-2.1-1.1-2.1-2.4c0-1 1.4-1.6 2.1-.6Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-gavel" viewBox="0 0 24 24">
+      <path d="m4 20 8-8m-4-4 6 6m-7.5-7.5 3-3 6 6-3 3-6-6Zm5-5 6 6" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24">
+      <path
+        d="M12 20s-7-4.4-7-9.2C5 8.2 7 6.5 9.2 6.5c1.2 0 2.2.6 2.8 1.5.6-.9 1.6-1.5 2.8-1.5 2.2 0 4.2 1.7 4.2 4.3 0 4.8-7 9.2-7 9.2Z"
+        fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24">
+      <circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6" />
+      <path d="M3.5 20c.4-3.4 2.5-5.5 5.5-5.5s5.1 2.1 5.5 5.5M16 5.3a3 3 0 0 1 0 5.4M17.5 14.8c1.9.5 3 2.3 3.3 5.2"
+        fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-crown" viewBox="0 0 24 24">
+      <path d="m4 8 4 3 4-6 4 6 4-3-2 10H6L4 8Z" fill="none" stroke="currentColor" stroke-width="1.6"
+        stroke-linejoin="round" />
+      <path d="M6 21h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24">
+      <path d="M12 3 5 6v5c0 4.5 2.8 8.2 7 10 4.2-1.8 7-5.5 7-10V6l-7-3Z" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linejoin="round" />
+      <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-spark" viewBox="0 0 24 24">
+      <path d="M12 2.5 14 9l6.5 2-6.5 2-2 6.5-2-6.5-6.5-2L10 9l2-6.5Z" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linejoin="round" />
+      <path d="M19 3v3M20.5 4.5h-3M5 17v3M6.5 18.5h-3" fill="none" stroke="currentColor" stroke-width="1.5"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-joker" viewBox="0 0 24 24">
+      <path d="M12 3.5 14.2 9l5.8.5-4.4 3.8 1.3 5.7-4.9-3-4.9 3 1.3-5.7L4 9.5 9.8 9 12 3.5Z" fill="none"
+        stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-target" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24">
+      <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+      <path d="m15.5 15.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-wifi" viewBox="0 0 24 24">
+      <path d="M3 9.5a13 13 0 0 1 18 0M6.5 13a8 8 0 0 1 11 0M10 16.5a3 3 0 0 1 4 0" fill="none" stroke="currentColor"
+        stroke-width="1.7" stroke-linecap="round" />
+      <circle cx="12" cy="20" r="1.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24">
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linejoin="round" />
+      <path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 10.5h5" fill="none" stroke="currentColor" stroke-width="1.6"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-gamepad" viewBox="0 0 24 24">
+      <path
+        d="M7.5 7h9A4.5 4.5 0 0 1 21 11.5v3a3 3 0 0 1-5.1 2.1l-1.2-1.2h-5.4l-1.2 1.2A3 3 0 0 1 3 14.5v-3A4.5 4.5 0 0 1 7.5 7Z"
+        fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      <path d="M7 11v4M5 13h4M16.5 12h.01M18.5 14h.01" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-trophy" viewBox="0 0 24 24">
+      <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" fill="none" stroke="currentColor" stroke-width="1.5"
+        stroke-linejoin="round" />
+      <path d="M8 5H4v2a4 4 0 0 0 4 4M16 5h4v2a4 4 0 0 1-4 4M12 13v4M8.5 21h7M9 17h6" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-swords" viewBox="0 0 24 24">
+      <path d="m4 4 7 7m-4 5-3 3m11-11 5-5M9 15l6-6m0 0 5 5M9 15l-4 4" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="m3 3 2.5.5L4.5 6 3 3ZM21 3l-2.5.5L19.5 6 21 3Z" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-quote" viewBox="0 0 24 24">
+      <path
+        d="M9 6C6 7 4.5 9.2 4.5 12.5V18H10v-6H7c0-2 .8-3.4 2.7-4.3L9 6Zm10 0c-3 1-4.5 3.2-4.5 6.5V18H20v-6h-3c0-2 .8-3.4 2.7-4.3L19 6Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-external" viewBox="0 0 24 24">
+      <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none"
+        stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+  </svg>
+
+  <!-- ============================================================
+       HEADER
+       ============================================================ -->
+  <header class="site-header" id="topo">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="Tormentalia — início">
+        <img src="assets/img/deus_mercado/deusmercado_interfereindo.png" alt="" width="44" height="44">
+        <span class="brand-text">TORMENTALIA</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Navegação principal">
+        <a href="index.html">Início</a>
+        <a href="index.html#multiplayer">Multiplayer</a>
+        <a href="manual.html">Manual</a>
+        <a href="cartas.html">Cartas</a>
+        <a href="avatares.html">Avatares</a>
+        <a href="sugestoes.html">Sugestões</a>
+        <a href="index.html#downloads" class="nav-cta">Baixar</a>
+      </nav>
+      <button class="menu-toggle" type="button" aria-controls="nav" aria-expanded="false" aria-label="Abrir menu">
+        <svg class="icon" aria-hidden="true">
+          <use href="#icon-menu"></use>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="conteudo">
+    <!-- ============================================================
+         CABEÇALHO DA PÁGINA
+         ============================================================ -->
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow" data-reveal><span class="eyebrow-dot"></span> Documentação · Loja do perfil · <span class="beta-badge">BETA</span></p>
+        <h1 data-reveal>Escolha seu <span class="text-gradient">teórico.</span></h1>
+        <p class="section-lead" data-reveal>Três avatares jogáveis, cada um com uma habilidade passiva que muda o seu
+          ritmo de jogo. Valem em qualquer mesa, da arena ao duelo em rede.</p>
+        <div class="page-hero-actions" data-reveal>
+          <a class="btn btn-gold btn-small" href="manual.html">
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-book"></use>
+            </svg>
+            Ler o manual
+          </a>
+          <a class="btn btn-ghost btn-small" href="cartas.html">
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-cards"></use>
+            </svg>
+            Ver as 32 cartas
+          </a>
+          <a class="btn btn-ghost btn-small" href="index.html">
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-arrow-left"></use>
+            </svg>
+            Voltar ao início
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         AVATARES
+         ============================================================ -->
+    <section class="section section-avatars">
+      <div class="container">
+        <div class="section-head" data-reveal>
+          <p class="eyebrow">Os três jogáveis</p>
+          <h2>Uma habilidade por <span class="text-gradient">estilo de mesa.</span></h2>
+          <p class="section-lead">O avatar é escolhido no perfil antes da partida. A habilidade é passiva: ela dispara
+            sozinha, sem gastar carta nem turno.</p>
+        </div>
+
+        <div class="avatar-grid">
+          <article class="avatar-card avatar-card-taylor" data-reveal>
+            <div class="avatar-portrait">
+              <img src="assets/img/avatars/frederick-taylor.webp" alt="Retrato de Frederick Taylor" width="640"
+                height="640" loading="lazy">
+              <span class="avatar-badge">100 moedas</span>
+            </div>
+            <div class="avatar-body">
+              <span class="avatar-role">Eficiência</span>
+              <h3>Frederick Taylor</h3>
+              <p class="avatar-quote">“Tempo é dinheiro — e a sua mão está cronometrada.”</p>
+              <div class="ability">
+                <span class="ability-label">Habilidade passiva</span>
+                <p>Cartas de Ação e Efeito que você joga recebem <strong>+10% de chance</strong> de sucesso.</p>
+              </div>
+              <p class="avatar-description"><strong>Estilo agressivo.</strong> Quanto mais cartas você joga por turno,
+                mais o bônus rende. Combine com cadeias da mesma classe para transformar 4 jogadas em acertos
+                garantidos.</p>
+            </div>
+          </article>
+
+          <article class="avatar-card avatar-card-marx" data-reveal>
+            <div class="avatar-portrait">
+              <img src="assets/img/avatars/karl-marx.webp" alt="Retrato de Karl Marx" width="640" height="640"
+                loading="lazy">
+              <span class="avatar-badge">100 moedas</span>
+            </div>
+            <div class="avatar-body">
+              <span class="avatar-role">Redistribuição</span>
+              <h3>Karl Marx</h3>
+              <p class="avatar-quote">“O caixa é uma luta de classes — e a sua está empatada.”</p>
+              <div class="ability">
+                <span class="ability-label">Habilidade passiva</span>
+                <p>No início do seu turno, o jogador de <strong>maior saldo doa R$ 100</strong> ao de menor saldo, entre
+                  os vivos. Se você for o mais rico, nada acontece.</p>
+              </div>
+              <p class="avatar-description"><strong>Estilo de longa mesa.</strong> Você pode estar na vala e ainda assim
+                puxar dinheiro do topo para baixo, turno após turno. Em partidas de 8, a transferência vira um fluxo
+                constante.</p>
+            </div>
+          </article>
+
+          <article class="avatar-card avatar-card-mayo" data-reveal>
+            <div class="avatar-portrait">
+              <img src="assets/img/avatars/elton-mayo.webp" alt="Retrato de Elton Mayo" width="640" height="640"
+                loading="lazy">
+              <span class="avatar-badge">100 moedas</span>
+            </div>
+            <div class="avatar-body">
+              <span class="avatar-role">Relações humanas</span>
+              <h3>Elton Mayo</h3>
+              <p class="avatar-quote">“O time satisfeito produz — e ainda desvia a facada.”</p>
+              <div class="ability">
+                <span class="ability-label">Habilidade passiva</span>
+                <p>Uma vez por rodada, quando um adversário joga <strong>carta negativa</strong> contra você, 30% de
+                  chance de neutralizar o efeito. A tentativa consome a sua chance da rodada.</p>
+              </div>
+              <p class="avatar-description"><strong>Estilo defensivo.</strong> Não ocupa o Defense Slot nem gasta carta
+                da mão: é uma proteção grátis que funciona mesmo quando você está sem defesa na mesa.</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="mini-grid cols-3" data-reveal>
+          <div class="mini-card" data-reveal>
+            <span class="mini-icon mini-icon-gold"><svg class="icon" aria-hidden="true">
+                <use href="#icon-coin"></use>
+              </svg></span>
+            <h4>Onde comprar</h4>
+            <p>Na loja do perfil, por <strong>100 moedas</strong> cada. Compre um, equipe no seu aparelho e ele já vale
+              na próxima partida.</p>
+          </div>
+          <div class="mini-card" data-reveal>
+            <span class="mini-icon mini-icon-cyan"><svg class="icon" aria-hidden="true">
+                <use href="#icon-trophy"></use>
+              </svg></span>
+            <h4>Como ganhar moedas</h4>
+            <p><strong>+10 moedas por vitória</strong>, pagas uma vez por partida. Vencer de virada é o caminho mais
+              rápido para os três.</p>
+          </div>
+          <div class="mini-card" data-reveal>
+            <span class="mini-icon mini-icon-pink"><svg class="icon" aria-hidden="true">
+                <use href="#icon-users"></use>
+              </svg></span>
+            <h4>Vale em toda mesa</h4>
+            <p>A habilidade é individual e funciona igual na arena e na partida em rede — inclusive quando vários
+              jogadores usam o mesmo teórico.</p>
+          </div>
+        </div>
+
+        <div class="callout callout-gold" data-reveal>
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-book"></use>
+          </svg>
+          <div>
+            <strong>Detalhes das habilidades</strong>
+            <p>O <a href="manual.html#avatares">capítulo 05 do manual</a> explica cada habilidade com os números exatos,
+              junto com o resto das regras — de como a renda é calculada a como o evento do Deus Mercado abre.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="assets/img/deus_mercado/deusmercado_interfereindo.png" alt="" width="52" height="52">
+        <div>
+          <strong>TORMENTALIA <span class="beta-badge">BETA</span></strong>
+          <p>Um jogo de cartas sobre capitalismo, teorias e sobrevivência.</p>
+        </div>
+      </div>
+      <nav class="footer-nav" aria-label="Navegação do rodapé">
+        <a href="index.html#jogo">O jogo</a>
+        <a href="index.html#multiplayer">Multiplayer</a>
+        <a href="manual.html">Manual</a>
+        <a href="cartas.html">Cartas</a>
+        <a href="avatares.html">Avatares</a>
+        <a href="sugestoes.html">Sugestões</a>
+        <a href="index.html#downloads">Downloads</a>
+      </nav>
+      <div class="footer-meta">
+        <p>Marcell Costa</p>
+        <p>© 2026 Tormentalia. Todos os direitos reservados.</p>
+        <a class="back-top" href="#topo">Voltar ao topo <span aria-hidden="true">↑</span></a>
+      </div>
+    </div>
+  </footer>
+</body>
+
+</html>

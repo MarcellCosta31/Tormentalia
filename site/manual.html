@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manual do CEO — Tormentalia</title>
+  <meta name="description"
+    content="Manual completo de Tormentalia: objetivo, turno, cartas, economia, avatares e multiplayer. Regras do card game para 2 a 8 jogadores.">
+  <meta name="theme-color" content="#08060d">
+  <meta name="robots" content="index,follow">
+  <meta property="og:type" content="article">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="Manual do CEO — Tormentalia">
+  <meta property="og:description"
+    content="Seis capítulos para levar sua empresa do primeiro real ao fim dos 10 turnos.">
+  <meta property="og:image" content="assets/img/brand/og-cover.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Manual do CEO — Tormentalia">
+  <meta name="twitter:description" content="Regras completas: turno, cartas, economia, avatares e multiplayer.">
+  <meta name="twitter:image" content="assets/img/brand/og-cover.jpg">
+
+  <link rel="icon" href="assets/img/brand/favicon.png" sizes="64x64" type="image/png">
+  <link rel="preload" href="assets/fonts/VCR_OSD_MONO.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+  <script defer src="js/app.js"></script>
+</head>
+
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+  <!-- ============================================================
+       SPRITE DE ÍCONES
+       ============================================================ -->
+  <svg class="svg-sprite" aria-hidden="true" focusable="false">
+    <symbol id="icon-windows" viewBox="0 0 24 24">
+      <path d="M3 5.5 10.5 4v7H3V5.5Zm0 13L10.5 20v-7H3v5.5ZM11.5 3.7 21 2v9h-9.5V3.7Zm0 8.3H21v9l-9.5-1.7V12Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-android" viewBox="0 0 24 24">
+      <path
+        d="M7.2 8.2h9.6v7.2a1.6 1.6 0 0 1-1.6 1.6h-.8v2.4a1.2 1.2 0 1 1-2.4 0V17h-1.2v2.4a1.2 1.2 0 1 1-2.4 0V17h-.8a1.6 1.6 0 0 1-1.6-1.6V8.2h1.2Z"
+        fill="currentColor" stroke="none" />
+      <path d="m7.4 7.2 1.1-2M16.6 7.2l-1.1-2M8.5 10.2h.01M15.5 10.2h.01" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24">
+      <path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+      <path d="M4 12h15m0 0-5-5m5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24">
+      <path d="M20 12H5m0 0 5-5m-5 5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24">
+      <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-chevron-down" viewBox="0 0 24 24">
+      <path d="m5 9 7 7 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-menu" viewBox="0 0 24 24">
+      <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24">
+      <path d="m5 12.5 4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-warning" viewBox="0 0 24 24">
+      <path d="M12 3 2.8 20h18.4L12 3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+      <path d="M12 9v5m0 3h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-coin" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+      <path d="M9 8.5h4.2a2.2 2.2 0 0 1 0 4.4H9.6m1.2 0V17m-1.8-8.5V17m4.8 0H9" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-cards" viewBox="0 0 24 24">
+      <rect x="7" y="4" width="11" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"
+        transform="rotate(8 12.5 11.5)" />
+      <rect x="5" y="6" width="11" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"
+        transform="rotate(-8 10.5 13.5)" />
+      <path d="M10.5 10.2c.7-1 2.1-.4 2.1.6 0 1.3-2.1 2.4-2.1 2.4s-2.1-1.1-2.1-2.4c0-1 1.4-1.6 2.1-.6Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-gavel" viewBox="0 0 24 24">
+      <path d="m4 20 8-8m-4-4 6 6m-7.5-7.5 3-3 6 6-3 3-6-6Zm5-5 6 6" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24">
+      <path
+        d="M12 20s-7-4.4-7-9.2C5 8.2 7 6.5 9.2 6.5c1.2 0 2.2.6 2.8 1.5.6-.9 1.6-1.5 2.8-1.5 2.2 0 4.2 1.7 4.2 4.3 0 4.8-7 9.2-7 9.2Z"
+        fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24">
+      <circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6" />
+      <path d="M3.5 20c.4-3.4 2.5-5.5 5.5-5.5s5.1 2.1 5.5 5.5M16 5.3a3 3 0 0 1 0 5.4M17.5 14.8c1.9.5 3 2.3 3.3 5.2"
+        fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-crown" viewBox="0 0 24 24">
+      <path d="m4 8 4 3 4-6 4 6 4-3-2 10H6L4 8Z" fill="none" stroke="currentColor" stroke-width="1.6"
+        stroke-linejoin="round" />
+      <path d="M6 21h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24">
+      <path d="M12 3 5 6v5c0 4.5 2.8 8.2 7 10 4.2-1.8 7-5.5 7-10V6l-7-3Z" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linejoin="round" />
+      <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-spark" viewBox="0 0 24 24">
+      <path d="M12 2.5 14 9l6.5 2-6.5 2-2 6.5-2-6.5-6.5-2L10 9l2-6.5Z" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linejoin="round" />
+      <path d="M19 3v3M20.5 4.5h-3M5 17v3M6.5 18.5h-3" fill="none" stroke="currentColor" stroke-width="1.5"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-joker" viewBox="0 0 24 24">
+      <path d="M12 3.5 14.2 9l5.8.5-4.4 3.8 1.3 5.7-4.9-3-4.9 3 1.3-5.7L4 9.5 9.8 9 12 3.5Z" fill="none"
+        stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-target" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24">
+      <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+      <path d="m15.5 15.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-wifi" viewBox="0 0 24 24">
+      <path d="M3 9.5a13 13 0 0 1 18 0M6.5 13a8 8 0 0 1 11 0M10 16.5a3 3 0 0 1 4 0" fill="none" stroke="currentColor"
+        stroke-width="1.7" stroke-linecap="round" />
+      <circle cx="12" cy="20" r="1.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24">
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linejoin="round" />
+      <path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 10.5h5" fill="none" stroke="currentColor" stroke-width="1.6"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-gamepad" viewBox="0 0 24 24">
+      <path
+        d="M7.5 7h9A4.5 4.5 0 0 1 21 11.5v3a3 3 0 0 1-5.1 2.1l-1.2-1.2h-5.4l-1.2 1.2A3 3 0 0 1 3 14.5v-3A4.5 4.5 0 0 1 7.5 7Z"
+        fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      <path d="M7 11v4M5 13h4M16.5 12h.01M18.5 14h.01" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-trophy" viewBox="0 0 24 24">
+      <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" fill="none" stroke="currentColor" stroke-width="1.5"
+        stroke-linejoin="round" />
+      <path d="M8 5H4v2a4 4 0 0 0 4 4M16 5h4v2a4 4 0 0 1-4 4M12 13v4M8.5 21h7M9 17h6" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-swords" viewBox="0 0 24 24">
+      <path d="m4 4 7 7m-4 5-3 3m11-11 5-5M9 15l6-6m0 0 5 5M9 15l-4 4" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="m3 3 2.5.5L4.5 6 3 3ZM21 3l-2.5.5L19.5 6 21 3Z" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-quote" viewBox="0 0 24 24">
+      <path
+        d="M9 6C6 7 4.5 9.2 4.5 12.5V18H10v-6H7c0-2 .8-3.4 2.7-4.3L9 6Zm10 0c-3 1-4.5 3.2-4.5 6.5V18H20v-6h-3c0-2 .8-3.4 2.7-4.3L19 6Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-external" viewBox="0 0 24 24">
+      <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none"
+        stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+  </svg>
+
+  <!-- ============================================================
+       HEADER
+       ============================================================ -->
+  <header class="site-header" id="topo">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="Tormentalia — início">
+        <img src="assets/img/deus_mercado/deusmercado_interfereindo.png" alt="" width="44" height="44">
+        <span class="brand-text">TORMENTALIA</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Navegação principal">
+        <a href="index.html">Início</a>
+        <a href="index.html#multiplayer">Multiplayer</a>
+        <a href="manual.html">Manual</a>
+        <a href="cartas.html">Cartas</a>
+        <a href="avatares.html">Avatares</a>
+        <a href="sugestoes.html">Sugestões</a>
+        <a href="index.html#downloads" class="nav-cta">Baixar</a>
+      </nav>
+      <button class="menu-toggle" type="button" aria-controls="nav" aria-expanded="false" aria-label="Abrir menu">
+        <svg class="icon" aria-hidden="true">
+          <use href="#icon-menu"></use>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="conteudo">
+    <!-- ============================================================
+         CABEÇALHO DA PÁGINA
+         ============================================================ -->
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow" data-reveal><span class="eyebrow-dot"></span> Documentação · 6 capítulos · <span class="beta-badge">BETA</span></p>
+        <h1 data-reveal>Manual do <span class="text-gradient">CEO.</span></h1>
+        <p class="section-lead" data-reveal>Do primeiro real ao fim dos 10 turnos: objetivo, turno, cartas, economia,
+          avatares e multiplayer. Leia na ordem ou pule direto ao assunto.</p>
+        <div class="page-hero-actions" data-reveal>
+          <a class="btn btn-gold btn-small" href="cartas.html">
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-cards"></use>
+            </svg>
+            Ver as 32 cartas
+          </a>
+          <a class="btn btn-ghost btn-small" href="avatares.html">
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-crown"></use>
+            </svg>
+            Ver avatares
+          </a>
+          <a class="btn btn-ghost btn-small" href="index.html">
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-arrow-left"></use>
+            </svg>
+            Voltar ao início
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         MANUAL
+         ============================================================ -->
+    <section class="section section-manual">
+      <div class="container">
+        <div class="manual-shell">
+          <!-- ---------- Sidebar ---------- -->
+          <aside class="manual-sidebar">
+            <nav class="manual-nav" role="tablist" aria-orientation="vertical" aria-label="Capítulos do manual">
+              <button class="manual-tab is-active" type="button" role="tab" id="inicio" data-tab="inicio"
+                aria-controls="panel-inicio" aria-selected="true" tabindex="0">
+                <span class="manual-num">01</span>
+                <span><strong>Primeiros passos</strong><small>O objetivo da mesa</small></span>
+              </button>
+              <button class="manual-tab" type="button" role="tab" id="turno" data-tab="turno"
+                aria-controls="panel-turno" aria-selected="false" tabindex="-1">
+                <span class="manual-num">02</span>
+                <span><strong>O turno</strong><small>Passo a passo da sua vez</small></span>
+              </button>
+              <button class="manual-tab" type="button" role="tab" id="cartas" data-tab="cartas"
+                aria-controls="panel-cartas" aria-selected="false" tabindex="-1">
+                <span class="manual-num">03</span>
+                <span><strong>Cartas &amp; classes</strong><small>O baralho de 32</small></span>
+              </button>
+              <button class="manual-tab" type="button" role="tab" id="economia" data-tab="economia"
+                aria-controls="panel-economia" aria-selected="false" tabindex="-1">
+                <span class="manual-num">04</span>
+                <span><strong>Economia</strong><small>Renda, satisfação e eventos</small></span>
+              </button>
+              <button class="manual-tab" type="button" role="tab" id="avatares" data-tab="avatares"
+                aria-controls="panel-avatares" aria-selected="false" tabindex="-1">
+                <span class="manual-num">05</span>
+                <span><strong>Avatares</strong><small>Taylor, Marx e Mayo</small></span>
+              </button>
+              <button class="manual-tab" type="button" role="tab" id="multiplayer" data-tab="multiplayer"
+                aria-controls="panel-multiplayer" aria-selected="false" tabindex="-1">
+                <span class="manual-num">06</span>
+                <span><strong>Multiplayer</strong><small>Arena e partida em rede</small></span>
+              </button>
+            </nav>
+
+            <div class="quick-facts">
+              <h3>Em números</h3>
+              <dl>
+                <div>
+                  <dt>Saldo inicial</dt>
+                  <dd>R$ 2.000</dd>
+                </div>
+                <div>
+                  <dt>Mão inicial</dt>
+                  <dd>7 cartas</dd>
+                </div>
+                <div>
+                  <dt>Turnos</dt>
+                  <dd>10</dd>
+                </div>
+                <div>
+                  <dt>Tempo de turno</dt>
+                  <dd>25s</dd>
+                </div>
+                <div>
+                  <dt>Cartas do baralho</dt>
+                  <dd>32</dd>
+                </div>
+                <div>
+                  <dt>Jogadores</dt>
+                  <dd>2 a 8</dd>
+                </div>
+              </dl>
+            </div>
+          </aside>
+
+          <!-- ---------- Conteúdo ---------- -->
+          <div class="manual-content">
+            <!-- Capítulo 01 -->
+            <div class="manual-panel is-active" id="panel-inicio" role="tabpanel" aria-labelledby="inicio">
+              <div class="panel-head">
+                <p class="panel-kicker">Capítulo 01</p>
+                <h3>O objetivo</h3>
+                <p>Você comanda uma empresa em um mundo onde o mercado é uma divindade caprichosa. Cada rodada cobra
+                  preço, cada carta pode salvar ou afundar o seu caixa — e no fim, só o saldo importa.</p>
+              </div>
+
+              <div class="callout callout-red">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-warning"></use>
+                </svg>
+                <div>
+                  <strong>Regra de ouro</strong>
+                  <p>Você começa com R$ 2.000, 7 cartas na mão e 10 turnos para provar que merece existir. Chegou a R$ 0
+                    é falência imediata: sem reserva, sem crédito, sem volta.</p>
+                </div>
+              </div>
+
+              <div class="mini-grid cols-3">
+                <div class="mini-card">
+                  <span class="mini-icon mini-icon-gold"><svg class="icon" aria-hidden="true">
+                      <use href="#icon-coin"></use>
+                    </svg></span>
+                  <h4>Saldo inicial</h4>
+                  <p>R$ 2.000 por empresa. O saldo nunca fica negativo — zero já é o fim.</p>
+                </div>
+                <div class="mini-card">
+                  <span class="mini-icon mini-icon-cyan"><svg class="icon" aria-hidden="true">
+                      <use href="#icon-cards"></use>
+                    </svg></span>
+                  <h4>Mão inicial</h4>
+                  <p>7 cartas. O teto é 7 e só sobe durante o evento do Deus Mercado, até 10.</p>
+                </div>
+                <div class="mini-card">
+                  <span class="mini-icon mini-icon-pink"><svg class="icon" aria-hidden="true">
+                      <use href="#icon-clock"></use>
+                    </svg></span>
+                  <h4>Duração</h4>
+                  <p>10 turnos completos, com a vez girando para a direita entre os vivos.</p>
+                </div>
+              </div>
+
+              <h4>Como a partida termina</h4>
+              <ul class="rule-list">
+                <li>
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#icon-check"></use>
+                  </svg>
+                  <span><strong>Por eliminação.</strong> Se todos os rivais falirem, você é o último de pé e leva a
+                    mesa.</span>
+                </li>
+                <li>
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#icon-check"></use>
+                  </svg>
+                  <span><strong>Por tempo.</strong> Acabaram os 10 turnos? O vivo com maior saldo vence.</span>
+                </li>
+                <li>
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#icon-check"></use>
+                  </svg>
+                  <span><strong>Empate.</strong> Saldos idênticos no topo e o mercado divide o prêmio — ninguém sai
+                    lucrando.</span>
+                </li>
+              </ul>
+
+              <div class="callout callout-gold">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-trophy"></use>
+                </svg>
+                <div>
+                  <strong>O lucro não vence</strong>
+                  <p>O livro-caixa mostra receitas, despesas e o seu lucro acumulado, mas ele é estatística: quem define
+                    o vencedor é o saldo na tela.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Capítulo 02 -->
+            <div class="manual-panel" id="panel-turno" role="tabpanel" aria-labelledby="turno" hidden>
+              <div class="panel-head">
+                <p class="panel-kicker">Capítulo 02</p>
+                <h3>O turno, passo a passo</h3>
+                <p>Cada jogador tem 25 segundos por turno. A vez avança para o próximo vivo e ninguém espera: se o
+                  relógio zera, a vez passa adiante.</p>
+              </div>
+
+              <h4>Na sua vez</h4>
+              <ol class="step-list">
+                <li>
+                  <span class="step-num">01</span>
+                  <div>
+                    <h4>Renda da rodada</h4>
+                    <p>No fim da rodada você recebe R$ 1.000 mais R$ 100 a cada rodada que passa, multiplicados pela sua
+                      produtividade.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="step-num">02</span>
+                  <div>
+                    <h4>Jogue até 2 cartas</h4>
+                    <p>A quota é de 2 cartas por turno, de qualquer classe. Guardar ou jogar cartas da Área Segura não
+                      consome essa quota.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="step-num">03</span>
+                  <div>
+                    <h4>Arme uma cadeia</h4>
+                    <p>Cartas da mesma classe em sequência acrescentam jogadas extras: até 2 extras, fechando o turno em
+                      4 cartas.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="step-num">04</span>
+                  <div>
+                    <h4>Defenda o caixa</h4>
+                    <p>O Defense Slot é único: uma nova defesa substitui a anterior e dura 2 turnos. Ao bloquear um
+                      ataque, ela é consumida.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="step-num">05</span>
+                  <div>
+                    <h4>Use a Área Segura</h4>
+                    <p>1 slot na sua mão para guardar cartas. Guardar não gasta quota nem encerra o turno, e jogar de
+                      lá também não consome quota — pode ser usado até fora do seu turno, como reação.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="step-num">06</span>
+                  <div>
+                    <h4>Passe a vez</h4>
+                    <p>Gastou a quota ou quer guardar energia? Passe quando quiser. Ao terminar o turno, sua mão
+                      completa até 7 cartas.</p>
+                  </div>
+                </li>
+              </ol>
+
+              <div class="chain-demo" aria-label="Exemplo de cadeia de cartas">
+                <span class="chain-pip is-base">Efeito 1</span>
+                <span class="chain-pip is-base">Efeito 2</span>
+                <span class="chain-pip is-bonus">+1 jogada</span>
+                <span class="chain-pip is-base">Efeito 3</span>
+                <span class="chain-pip is-max">+2 jogadas · teto</span>
+              </div>
+              <p class="panel-note">A cadeia zera no início do seu turno e recomeça do zero se você trocar de classe no
+                meio da sequência.</p>
+
+              <div class="callout callout-cyan">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-shield"></use>
+                </svg>
+                <div>
+                  <strong>Defesa também é jogada</strong>
+                  <p>Cartas de proteção não gastam a quota nem alimentam a cadeia: elas vão direto para o Defense Slot.
+                    Se uma nova defesa entrar, a antiga vai para o descarte.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Capítulo 03 -->
+            <div class="manual-panel" id="panel-cartas" role="tabpanel" aria-labelledby="cartas" hidden>
+              <div class="panel-head">
+                <p class="panel-kicker">Capítulo 03</p>
+                <h3>O baralho, classe por classe</h3>
+                <p>São 32 cartas no baralho padrão, divididas em 4 classes. Cada carta tem chance de sucesso própria,
+                  entre 55% e 100% — falhou, o efeito não aplica.</p>
+              </div>
+
+              <div class="class-grid">
+                <article class="class-card class-acao">
+                  <div class="class-card-head">
+                    <span class="class-icon"><svg class="icon" aria-hidden="true">
+                        <use href="#icon-coin"></use>
+                      </svg></span>
+                    <span class="class-count">4 cartas</span>
+                  </div>
+                  <h4>Ação</h4>
+                  <p>Movem o dinheiro: ganham, derrubam o saldo dos rivais e forçam decisões caras.</p>
+                  <span class="class-examples">Nosso · Toyotinho · Empréstimo</span>
+                </article>
+
+                <article class="class-card class-efeito">
+                  <div class="class-card-head">
+                    <span class="class-icon"><svg class="icon" aria-hidden="true">
+                        <use href="#icon-spark"></use>
+                      </svg></span>
+                    <span class="class-count">17 cartas</span>
+                  </div>
+                  <h4>Efeito</h4>
+                  <p>Interferem nas mãos e nos turnos alheios: roubam cartas, mexem em chances e travam combos.</p>
+                  <span class="class-examples">Que Atrevido · Tempos e Movimentos · Seiketsu</span>
+                </article>
+
+                <article class="class-card class-defesa">
+                  <div class="class-card-head">
+                    <span class="class-icon"><svg class="icon" aria-hidden="true">
+                        <use href="#icon-shield"></use>
+                      </svg></span>
+                    <span class="class-count">5 cartas</span>
+                  </div>
+                  <h4>Defesa</h4>
+                  <p>Proteções que ocupam o Defense Slot e bloqueiam perdas direcionadas por 2 turnos.</p>
+                  <span class="class-examples">Mão Visível · Psicologia Industrial</span>
+                </article>
+
+                <article class="class-card class-curinga">
+                  <div class="class-card-head">
+                    <span class="class-icon"><svg class="icon" aria-hidden="true">
+                        <use href="#icon-joker"></use>
+                      </svg></span>
+                    <span class="class-count">6 cartas</span>
+                  </div>
+                  <h4>Curinga</h4>
+                  <p>Efeitos globais que atingem a mesa inteira e embaralham as contas de todo mundo.</p>
+                  <span class="class-examples">O Monstro Inflação · Flutuação do Mercado</span>
+                </article>
+              </div>
+
+              <h4>Anatomia de uma carta</h4>
+              <div class="anatomy">
+                <figure class="anatomy-card">
+                  <img src="assets/img/cards/51.webp" alt="Exemplo de carta de Tormentalia" width="377" height="661"
+                    loading="lazy">
+                </figure>
+                <ul class="anatomy-legend">
+                  <li>
+                    <span class="legend-pin">1</span>
+                    <div>
+                      <strong>Nome e arte</strong>
+                      <p>O título e a ilustração que identificam a carta na mão e na Pilha de Jogadas.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="legend-pin">2</span>
+                    <div>
+                      <strong>Chance de sucesso</strong>
+                      <p>Percentual de acerto. Em caso de falha o efeito não aplica — mas o dinheiro de falha, quando
+                        existe, é cobrado mesmo assim.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="legend-pin">3</span>
+                    <div>
+                      <strong>Efeito</strong>
+                      <p>O que acontece no exato momento em que a carta é jogada, com alvo e duração.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="legend-pin">4</span>
+                    <div>
+                      <strong>Dica de uso</strong>
+                      <p>O risco calculado da aposta e o momento certo de segurar a carta na mão.</p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="callout callout-gold">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-cards"></use>
+                </svg>
+                <div>
+                  <strong>Carta dobrada</strong>
+                  <p>Da segunda carta com o mesmo id no seu turno em diante, a chance é multiplicada por 1,3 (limite de
+                    100%). O contador zera no seu próximo turno. Repetir carta rende.</p>
+                </div>
+              </div>
+
+              <h4>Combinações de mercado</h4>
+              <p class="panel-note">Verificadas no fim da rodada, depois da renda. Cada combinação paga uma vez por
+                rodada e exige todas as cartas jogadas com sucesso naquela rodada.</p>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">Combinação</th>
+                      <th scope="col">Cartas</th>
+                      <th scope="col">Prêmio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>5S Completo</td>
+                      <td>Seiri, Seiton, Seiso, Seiketsu, Shitsuke</td>
+                      <td>+R$ 300</td>
+                    </tr>
+                    <tr>
+                      <td>Tríade Financeira</td>
+                      <td>Empréstimo, Nosso, Cris e Greg Agiotas</td>
+                      <td>+R$ 250</td>
+                    </tr>
+                    <tr>
+                      <td>Marketing e Produção</td>
+                      <td>Toyotinho, Presente do Noel, Queima de Estoque</td>
+                      <td>+R$ 200</td>
+                    </tr>
+                    <tr>
+                      <td>Controle e Defesa</td>
+                      <td>Psicologia Industrial, Mão Visível, Tempos e Movimentos</td>
+                      <td>+R$ 150</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="callout callout-cyan">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-search"></use>
+                </svg>
+                <div>
+                  <strong>Quer ver todas?</strong>
+                  <p>A <a href="cartas.html">galeria de cartas</a> traz as 32 cartas com filtro por classe, busca e
+                    ficha completa de chance, efeito e dica.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Capítulo 04 -->
+            <div class="manual-panel" id="panel-economia" role="tabpanel" aria-labelledby="economia" hidden>
+              <div class="panel-head">
+                <p class="panel-kicker">Capítulo 04</p>
+                <h3>Dinheiro, satisfação e o Deus Mercado</h3>
+                <p>O caixa é a sua vida, mas dois medidores decidem quanto ele rende: a satisfação do time e a
+                  produtividade da operação.</p>
+              </div>
+
+              <h4>Renda de rodada</h4>
+              <div class="formula-card">
+                <span class="formula-label">Quanto entra no seu caixa</span>
+                <div class="formula">
+                  <span>( R$ 1.000 + ( rodada − 1 ) × R$ 100 )</span>
+                  <span>×</span>
+                  <b>( 1 + produtividade )</b>
+                </div>
+                <p>A produtividade é individual e acumula rodada após rodada, sem teto de cima. Com produtividade
+                  negativa a renda cai; chegando a −100% ela vira zero e você só depende das cartas.</p>
+              </div>
+
+              <h4>Satisfação: de 0 a 200</h4>
+              <div class="mini-grid cols-2">
+                <div class="mini-card">
+                  <span class="mini-icon mini-icon-pink"><svg class="icon" aria-hidden="true">
+                      <use href="#icon-heart"></use>
+                    </svg></span>
+                  <h4>0 = Greve</h4>
+                  <p>A barra começa em 100. Em 0 o time entra em greve e você perde o próximo turno; ao sair, a barra
+                    volta a 100.</p>
+                </div>
+                <div class="mini-card">
+                  <span class="mini-icon mini-icon-gold"><svg class="icon" aria-hidden="true">
+                      <use href="#icon-spark"></use>
+                    </svg></span>
+                  <h4>200 = Efeitos dobrados</h4>
+                  <p>Em 200, suas próximas 2 cartas têm o efeito de sucesso dobrado. Acabou o bônus e a barra volta a
+                    100.</p>
+                </div>
+              </div>
+
+              <h4>O evento do Deus Mercado</h4>
+              <p class="panel-note">A cada 2 rodadas — nas rodadas 2, 4, 6 e 8, nunca depois da 10 — o mercado abre as
+                portas em quatro passos, sempre nesta ordem.</p>
+              <div class="event-grid">
+                <article class="event-card">
+                  <span class="event-icon"><svg class="icon" aria-hidden="true">
+                      <use href="#icon-gavel"></use>
+                    </svg></span>
+                  <h4>1. Leilão</h4>
+                  <p>15 segundos para um produto único: uma carta ou um kit de 2 a 3 cartas. Um lance por jogador, em
+                    passos de R$ 100, de R$ 0 a R$ 500. O maior lance leva tudo, pagamento único.</p>
+                </article>
+                <article class="event-card">
+                  <span class="event-icon"><svg class="icon" aria-hidden="true">
+                      <use href="#icon-cards"></use>
+                    </svg></span>
+                  <h4>2. Lojinha</h4>
+                  <p>Outros 15 segundos, com até 3 cartas à venda por R$ 100 a R$ 400 — curingas custam R$ 100 a mais.
+                    Quem compra leva a carta para a mão.</p>
+                </article>
+                <article class="event-card">
+                  <span class="event-icon"><svg class="icon" aria-hidden="true">
+                      <use href="#icon-spark"></use>
+                    </svg></span>
+                  <h4>3. Fusão</h4>
+                  <p>De 2 a 5 cartas da mão ou da Área Segura viram uma Super Carta sorteada: Kaizen Supremo, Jidoka
+                    Total, Heijunka Total ou Andon Total. O tipo é sorteio, sem escolha.</p>
+                </article>
+                <article class="event-card">
+                  <span class="event-icon"><svg class="icon" aria-hidden="true">
+                      <use href="#icon-close"></use>
+                    </svg></span>
+                  <h4>4. Fechar</h4>
+                  <p>O meta-evento encerra, o teto de 10 cartas volta ao normal e a rodada segue. Antes do leilão, um
+                    Curinga Global é sorteado e passa a valer para a mesa inteira.</p>
+                </article>
+              </div>
+
+              <div class="callout callout-red">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-warning"></use>
+                </svg>
+                <div>
+                  <strong>Falência</strong>
+                  <p>R$ 0 é falência imediata: saldo zero, status de eliminado, sem fundo de reserva. O saldo nunca fica
+                    negativo — e o livro-caixa continua registrando o que sobrou.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Capítulo 05 -->
+            <div class="manual-panel" id="panel-avatares" role="tabpanel" aria-labelledby="avatares" hidden>
+              <div class="panel-head">
+                <p class="panel-kicker">Capítulo 05</p>
+                <h3>Escolha seu teórico</h3>
+                <p>Três avatares comprados com moedas do perfil, cada um com uma habilidade passiva que muda o seu jeito
+                  de jogar. Eles valem em qualquer mesa multiplayer.</p>
+              </div>
+
+              <div class="mini-grid cols-3">
+                <div class="mini-card avatar-mini">
+                  <div class="avatar-mini-head">
+                    <img src="assets/img/avatars/frederick-taylor.webp" alt="" width="56" height="56" loading="lazy">
+                    <div>
+                      <span class="avatar-role">Eficiência</span>
+                      <h4>Frederick Taylor</h4>
+                    </div>
+                  </div>
+                  <p class="ability-line"><strong>Habilidade</strong> Cartas de Ação e Efeito que você joga recebem +10%
+                    de chance de sucesso.</p>
+                  <p class="ability-line"><strong>Estilo</strong> Agressivo: quanto mais você joga, mais o bônus rende.
+                  </p>
+                </div>
+
+                <div class="mini-card avatar-mini">
+                  <div class="avatar-mini-head">
+                    <img src="assets/img/avatars/karl-marx.webp" alt="" width="56" height="56" loading="lazy">
+                    <div>
+                      <span class="avatar-role">Redistribuição</span>
+                      <h4>Karl Marx</h4>
+                    </div>
+                  </div>
+                  <p class="ability-line"><strong>Habilidade</strong> No início do seu turno, o jogador de maior saldo
+                    doa R$ 100 ao de menor saldo (entre os vivos). Se você for o mais rico, não acontece.</p>
+                  <p class="ability-line"><strong>Estilo</strong> Puxa dinheiro da mesa para baixo mesmo quando você
+                    está na vala.</p>
+                </div>
+
+                <div class="mini-card avatar-mini">
+                  <div class="avatar-mini-head">
+                    <img src="assets/img/avatars/elton-mayo.webp" alt="" width="56" height="56" loading="lazy">
+                    <div>
+                      <span class="avatar-role">Relações humanas</span>
+                      <h4>Elton Mayo</h4>
+                    </div>
+                  </div>
+                  <p class="ability-line"><strong>Habilidade</strong> Uma vez por rodada, quando um adversário joga
+                    carta negativa contra você, 30% de chance de neutralizar o efeito.</p>
+                  <p class="ability-line"><strong>Estilo</strong> Defensivo: aguenta marteladas de efeito sem quebrar o
+                    caixa.</p>
+                </div>
+              </div>
+
+              <div class="callout callout-gold">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-crown"></use>
+                </svg>
+                <div>
+                  <strong>Como escolher</strong>
+                  <p>Os avatares ficam na loja do perfil por 100 moedas cada, e as moedas vêm das partidas: +10 por
+                    vitória. Na página de <a href="avatares.html">avatares</a> você vê as habilidades lado a lado.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Capítulo 06 -->
+            <div class="manual-panel" id="panel-multiplayer" role="tabpanel" aria-labelledby="multiplayer" hidden>
+              <div class="panel-head">
+                <p class="panel-kicker">Capítulo 06</p>
+                <h3>Arena e partida em rede</h3>
+                <p>Nesta versão o jogo é multiplayer: de 2 a 8 jogadores, na mesma mesa ou pela rede local. As regras
+                  dos capítulos anteriores valem para todo mundo.</p>
+              </div>
+
+              <div class="mode-mini-grid">
+                <div class="mode-mini">
+                  <h4>Arena</h4>
+                  <p>Você escolhe quantos jogadores entram na mesma mesa: 2 é DUELO, 3 e 4 é BATALHA, 5 e 6 é GUERRA, 7
+                    e 8 é CAOS TOTAL. Mesmo motor, mesma renda, mesma volta ao mercado.</p>
+                </div>
+                <div class="mode-mini">
+                  <h4>Partida em rede</h4>
+                  <p>O anfitrião roda a partida e os outros espelham o estado pelo Wi-Fi da casa. Cada um no seu
+                    aparelho, com o tempo de turno expirando de verdade.</p>
+                </div>
+              </div>
+
+              <h4>Como montar a mesa</h4>
+              <ol class="step-list">
+                <li>
+                  <span class="step-num">01</span>
+                  <div>
+                    <h4>Crie a sala</h4>
+                    <p>Ligue o hotspot e toque em CRIAR SALA. O IP e a porta aparecem na tela do anfitrião.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="step-num">02</span>
+                  <div>
+                    <h4>Conecte pelo IP</h4>
+                    <p>Cada jogador entra com o IP do anfitrião na mesma rede e aparece na sala de espera, com chat e
+                      status de prontidão.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="step-num">03</span>
+                  <div>
+                    <h4>Comece</h4>
+                    <p>Todos prontos? O anfitrião inicia a partida. Vagas vazias podem ser preenchidas por bots, até o
+                      limite de 8.</p>
+                  </div>
+                </li>
+              </ol>
+
+              <ul class="rule-list">
+                <li>
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#icon-check"></use>
+                  </svg>
+                  <span><strong>Sem servidor.</strong> A conexão é direta entre aparelhos na mesma rede — nada de
+                    internet, nuvem ou conta.</span>
+                </li>
+                <li>
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#icon-check"></use>
+                  </svg>
+                  <span><strong>Sala cheia.</strong> O limite é de 8 jogadores por sala, e quem desconectar sai da
+                    rotação da vez.</span>
+                </li>
+                <li>
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#icon-check"></use>
+                  </svg>
+                  <span><strong>Turno que expira.</strong> Diferente da partida na mesma tela, o tempo de 25 segundos
+                    corre para todo mundo.</span>
+                </li>
+              </ul>
+
+              <div class="callout callout-cyan">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-gavel"></use>
+                </svg>
+                <div>
+                  <strong>Eventos na rede</strong>
+                  <p>Na partida em rede, o anfitrião conduz o leilão; a lojinha e a fusão ficam de fora para a mesa não
+                    travar. Na arena, os quatro passos do evento rodam por inteiro.</p>
+                </div>
+              </div>
+
+              <div class="callout callout-gold">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-gamepad"></use>
+                </svg>
+                <div>
+                  <strong>Continue estudando</strong>
+                  <p>Combine este manual com a <a href="cartas.html">galeria de cartas</a> e a página de <a
+                      href="avatares.html">avatares</a> — ou volte para o <a href="index.html">início</a> para baixar o
+                    jogo.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- ---------- Glossário ---------- -->
+            <div class="glossary">
+              <div class="glossary-head">
+                <p class="eyebrow">Referência rápida</p>
+                <h3>Glossário</h3>
+              </div>
+              <dl class="glossary-grid">
+                <div>
+                  <dt>Área Segura</dt>
+                  <dd>1 slot na sua mão para guardar cartas sem gastar a quota do turno.</dd>
+                </div>
+                <div>
+                  <dt>Baralho infinito</dt>
+                  <dd>Cada compra cria uma cópia nova. O descarte não volta ao baralho: não existe reembaralhar.</dd>
+                </div>
+                <div>
+                  <dt>Cadeia</dt>
+                  <dd>Cartas da mesma classe em sequência que acrescentam jogadas extras, até 4 cartas no turno.</dd>
+                </div>
+                <div>
+                  <dt>Curinga Global</dt>
+                  <dd>Efeito sorteado antes do leilão que passa a valer para a mesa inteira, substituindo o anterior.
+                  </dd>
+                </div>
+                <div>
+                  <dt>Defense Slot</dt>
+                  <dd>Slot único de defesa, dura 2 turnos do dono e é consumido ao bloquear um ataque.</dd>
+                </div>
+                <div>
+                  <dt>Deus Mercado</dt>
+                  <dd>A divindade do mercado: abre leilão, lojinha e fusão a cada 2 rodadas e muda as regras da mesa.
+                  </dd>
+                </div>
+                <div>
+                  <dt>Falência</dt>
+                  <dd>Saldo em R$ 0. Elimina o jogador na hora, sem reserva e sem saldo negativo.</dd>
+                </div>
+                <div>
+                  <dt>Leilão</dt>
+                  <dd>15 segundos de lance único por jogador, em passos de R$ 100. O maior lance leva o produto inteiro.
+                  </dd>
+                </div>
+                <div>
+                  <dt>Livro-caixa</dt>
+                  <dd>Extrato de receitas, despesas e lucro. É estatística, não critério de vitória.</dd>
+                </div>
+                <div>
+                  <dt>Produtividade</dt>
+                  <dd>Multiplica a renda da rodada. Acumula sem teto de cima, com piso em −100%.</dd>
+                </div>
+                <div>
+                  <dt>Satisfação</dt>
+                  <dd>Barra de 0 a 200 que começa em 100. Em 0 é greve; em 200, as próximas 2 cartas têm efeito dobrado.
+                  </dd>
+                </div>
+                <div>
+                  <dt>Super Carta</dt>
+                  <dd>Resultado da fusão de 2 a 5 cartas. Fica fora do baralho comum, com efeitos próprios.</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="assets/img/deus_mercado/deusmercado_interfereindo.png" alt="" width="52" height="52">
+        <div>
+          <strong>TORMENTALIA <span class="beta-badge">BETA</span></strong>
+          <p>Um jogo de cartas sobre capitalismo, teorias e sobrevivência.</p>
+        </div>
+      </div>
+      <nav class="footer-nav" aria-label="Navegação do rodapé">
+        <a href="index.html#jogo">O jogo</a>
+        <a href="index.html#multiplayer">Multiplayer</a>
+        <a href="manual.html">Manual</a>
+        <a href="cartas.html">Cartas</a>
+        <a href="avatares.html">Avatares</a>
+        <a href="sugestoes.html">Sugestões</a>
+        <a href="index.html#downloads">Downloads</a>
+      </nav>
+      <div class="footer-meta">
+        <p>Marcell Costa</p>
+        <p>© 2026 Tormentalia. Todos os direitos reservados.</p>
+        <a class="back-top" href="#topo">Voltar ao topo <span aria-hidden="true">↑</span></a>
+      </div>
+    </div>
+  </footer>
+</body>
+
+</html>

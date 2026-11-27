@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tormentalia — card game multiplayer de estratégia, blefe e sobrevivência</title>
+  <meta name="description"
+    content="Tormentalia é um card game multiplayer de estratégia, blefe e sobrevivência para 2 a 8 jogadores. Monte sua empresa, jogue 32 cartas e dispute leilões. Grátis para Windows e Android.">
+  <meta name="theme-color" content="#08060d">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="Tormentalia — O capitalismo é um jogo">
+  <meta property="og:description"
+    content="Monte sua empresa, jogue cartas e sabotar rivais em partidas de 2 a 8 jogadores. Um card game de estratégia e blefe.">
+  <meta property="og:image" content="assets/img/brand/og-cover.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Tormentalia">
+  <meta name="twitter:description"
+    content="Card game multiplayer de estratégia e blefe para 2 a 8 jogadores. Disponível para Windows e Android.">
+  <meta name="twitter:image" content="assets/img/brand/og-cover.jpg">
+
+  <link rel="icon" href="assets/img/deus_mercado/8.png" sizes="64x64" type="image/png">
+  <link rel="preload" href="assets/fonts/VCR_OSD_MONO.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="assets/img/brand/logo.webp" as="image">
+  <link rel="stylesheet" href="css/style.css">
+  <script defer src="js/cards-data.js"></script>
+  <script defer src="js/app.js"></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "Tormentalia",
+    "description": "Card game multiplayer de estratégia, blefe e sobrevivência sobre empresas, teorias e um Deus Mercado caprichoso.",
+    "genre": ["Card Game", "Strategy"],
+    "gamePlatform": ["Windows", "Android"],
+    "operatingSystem": "Windows 10/11, Android",
+    "applicationCategory": "Game",
+    "inLanguage": "pt-BR",
+    "multiplayerMode": "LocalMultiplayer",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" },
+    "image": "assets/img/brand/og-cover.jpg"
+  }
+  </script>
+</head>
+
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+  <!-- ============================================================
+       SPRITE DE ÍCONES
+       ============================================================ -->
+  <svg class="svg-sprite" aria-hidden="true" focusable="false">
+    <symbol id="icon-windows" viewBox="0 0 24 24">
+      <path d="M3 5.5 10.5 4v7H3V5.5Zm0 13L10.5 20v-7H3v5.5ZM11.5 3.7 21 2v9h-9.5V3.7Zm0 8.3H21v9l-9.5-1.7V12Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-android" viewBox="0 0 24 24">
+      <path
+        d="M7.2 8.2h9.6v7.2a1.6 1.6 0 0 1-1.6 1.6h-.8v2.4a1.2 1.2 0 1 1-2.4 0V17h-1.2v2.4a1.2 1.2 0 1 1-2.4 0V17h-.8a1.6 1.6 0 0 1-1.6-1.6V8.2h1.2Z"
+        fill="currentColor" stroke="none" />
+      <path d="m7.4 7.2 1.1-2M16.6 7.2l-1.1-2M8.5 10.2h.01M15.5 10.2h.01" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24">
+      <path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+      <path d="M4 12h15m0 0-5-5m5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24">
+      <path d="M20 12H5m0 0 5-5m-5 5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24">
+      <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-chevron-down" viewBox="0 0 24 24">
+      <path d="m5 9 7 7 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-menu" viewBox="0 0 24 24">
+      <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24">
+      <path d="m5 12.5 4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-warning" viewBox="0 0 24 24">
+      <path d="M12 3 2.8 20h18.4L12 3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+      <path d="M12 9v5m0 3h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-coin" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+      <path d="M9 8.5h4.2a2.2 2.2 0 0 1 0 4.4H9.6m1.2 0V17m-1.8-8.5V17m4.8 0H9" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-cards" viewBox="0 0 24 24">
+      <rect x="7" y="4" width="11" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"
+        transform="rotate(8 12.5 11.5)" />
+      <rect x="5" y="6" width="11" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"
+        transform="rotate(-8 10.5 13.5)" />
+      <path d="M10.5 10.2c.7-1 2.1-.4 2.1.6 0 1.3-2.1 2.4-2.1 2.4s-2.1-1.1-2.1-2.4c0-1 1.4-1.6 2.1-.6Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-gavel" viewBox="0 0 24 24">
+      <path d="m4 20 8-8m-4-4 6 6m-7.5-7.5 3-3 6 6-3 3-6-6Zm5-5 6 6" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24">
+      <path
+        d="M12 20s-7-4.4-7-9.2C5 8.2 7 6.5 9.2 6.5c1.2 0 2.2.6 2.8 1.5.6-.9 1.6-1.5 2.8-1.5 2.2 0 4.2 1.7 4.2 4.3 0 4.8-7 9.2-7 9.2Z"
+        fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24">
+      <circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6" />
+      <path d="M3.5 20c.4-3.4 2.5-5.5 5.5-5.5s5.1 2.1 5.5 5.5M16 5.3a3 3 0 0 1 0 5.4M17.5 14.8c1.9.5 3 2.3 3.3 5.2"
+        fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-crown" viewBox="0 0 24 24">
+      <path d="m4 8 4 3 4-6 4 6 4-3-2 10H6L4 8Z" fill="none" stroke="currentColor" stroke-width="1.6"
+        stroke-linejoin="round" />
+      <path d="M6 21h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24">
+      <path d="M12 3 5 6v5c0 4.5 2.8 8.2 7 10 4.2-1.8 7-5.5 7-10V6l-7-3Z" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linejoin="round" />
+      <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-spark" viewBox="0 0 24 24">
+      <path d="M12 2.5 14 9l6.5 2-6.5 2-2 6.5-2-6.5-6.5-2L10 9l2-6.5Z" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linejoin="round" />
+      <path d="M19 3v3M20.5 4.5h-3M5 17v3M6.5 18.5h-3" fill="none" stroke="currentColor" stroke-width="1.5"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-joker" viewBox="0 0 24 24">
+      <path d="M12 3.5 14.2 9l5.8.5-4.4 3.8 1.3 5.7-4.9-3-4.9 3 1.3-5.7L4 9.5 9.8 9 12 3.5Z" fill="none"
+        stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-target" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24">
+      <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+      <path d="m15.5 15.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-wifi" viewBox="0 0 24 24">
+      <path d="M3 9.5a13 13 0 0 1 18 0M6.5 13a8 8 0 0 1 11 0M10 16.5a3 3 0 0 1 4 0" fill="none" stroke="currentColor"
+        stroke-width="1.7" stroke-linecap="round" />
+      <circle cx="12" cy="20" r="1.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24">
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linejoin="round" />
+      <path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 10.5h5" fill="none" stroke="currentColor" stroke-width="1.6"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-gamepad" viewBox="0 0 24 24">
+      <path
+        d="M7.5 7h9A4.5 4.5 0 0 1 21 11.5v3a3 3 0 0 1-5.1 2.1l-1.2-1.2h-5.4l-1.2 1.2A3 3 0 0 1 3 14.5v-3A4.5 4.5 0 0 1 7.5 7Z"
+        fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      <path d="M7 11v4M5 13h4M16.5 12h.01M18.5 14h.01" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-trophy" viewBox="0 0 24 24">
+      <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" fill="none" stroke="currentColor" stroke-width="1.5"
+        stroke-linejoin="round" />
+      <path d="M8 5H4v2a4 4 0 0 0 4 4M16 5h4v2a4 4 0 0 1-4 4M12 13v4M8.5 21h7M9 17h6" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+    <symbol id="icon-swords" viewBox="0 0 24 24">
+      <path d="m4 4 7 7m-4 5-3 3m11-11 5-5M9 15l6-6m0 0 5 5M9 15l-4 4" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="m3 3 2.5.5L4.5 6 3 3ZM21 3l-2.5.5L19.5 6 21 3Z" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-quote" viewBox="0 0 24 24">
+      <path
+        d="M9 6C6 7 4.5 9.2 4.5 12.5V18H10v-6H7c0-2 .8-3.4 2.7-4.3L9 6Zm10 0c-3 1-4.5 3.2-4.5 6.5V18H20v-6h-3c0-2 .8-3.4 2.7-4.3L19 6Z"
+        fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-external" viewBox="0 0 24 24">
+      <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none"
+        stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+    </symbol>
+  </svg>
+
+  <!-- ============================================================
+       HEADER
+       ============================================================ -->
+  <header class="site-header" id="topo">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="Tormentalia — início">
+        <img src="assets/img/deus_mercado/deusmercado_interfereindo.png" alt="" width="120" height="120">
+        <span class="brand-text">TORMENTALIA</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Navegação principal">
+        <a href="#inicio">Início</a>
+        <a href="index.html#multiplayer">Multiplayer</a>
+        <a href="manual.html">Manual</a>
+        <a href="cartas.html">Cartas</a>
+        <a href="avatares.html">Avatares</a>
+        <a href="sugestoes.html">Sugestões</a>
+        <a href="index.html#downloads" class="nav-cta">Baixar</a>
+      </nav>
+      <button class="menu-toggle" type="button" aria-controls="nav" aria-expanded="false" aria-label="Abrir menu">
+        <svg class="icon" aria-hidden="true">
+          <use href="#icon-menu"></use>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="conteudo">
+    <!-- ============================================================
+         HERO
+         ============================================================ -->
+    <section class="hero" id="inicio">
+      <div class="hero-bg" aria-hidden="true">
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-hand"></div>
+        <div class="hero-grid"></div>
+      </div>
+      <canvas class="hero-particles" id="particles" aria-hidden="true"></canvas>
+
+      <div class="container hero-inner">
+
+        <h1 class="hero-title" data-reveal>
+          <img src="assets/img/brand/Logo.png" alt="Tormentalia" width="1600" height="893" fetchpriority="high">
+        </h1>
+        <p class="hero-beta" data-reveal><span class="beta-badge">BETA</span> Versão 1.0 em testes · <a href="sugestoes.html">envie sua sugestão</a></p>
+        <p class="hero-tagline" data-reveal>Compre. Blefe. Sobreviva. <em>O mercado não perdoa.</em></p>
+        <p class="hero-copy" data-reveal>Monte sua empresa, jogue cartas e sabotar rivais em partidas de <strong>2 a 8
+            jogadores</strong>. Um card game de estratégia, blefe e sobrevivência — direto para a mesa.</p>
+
+        <div class="hero-actions" data-reveal>
+          <a class="btn btn-gold" href="downloads/Tormentalia-Windows.zip" download>
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-windows"></use>
+            </svg>
+            <span><strong>Baixar para Windows</strong><small></small></span>
+          </a>
+          <a class="btn btn-pink" href="downloads/Tormentalia-release.apk" download>
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-android"></use>
+            </svg>
+            <span><strong>Baixar para Android</strong><small></small></span>
+          </a>
+        </div>
+
+        <div class="hero-meta" data-reveal>
+          <span><svg class="icon" aria-hidden="true">
+              <use href="#icon-check"></use>
+            </svg> Grátis</span>
+          <span><svg class="icon" aria-hidden="true">
+              <use href="#icon-check"></use>
+            </svg> PT-BR</span>
+          <span><svg class="icon" aria-hidden="true">
+              <use href="#icon-check"></use>
+            </svg> 2–8 jogadores</span>
+          <span><svg class="icon" aria-hidden="true">
+              <use href="#icon-check"></use>
+            </svg> Multiplayer local</span>
+        </div>
+      </div>
+
+      <div class="hero-cards" aria-hidden="true">
+        <div class="hero-card hero-card-1"><img src="assets/img/cards/51.webp" alt="" width="377" height="661"></div>
+        <div class="hero-card hero-card-2"><img src="assets/img/cards/23.webp" alt="" width="377" height="661"></div>
+        <div class="hero-card hero-card-3"><img src="assets/img/cards/6.webp" alt="" width="377" height="661"></div>
+      </div>
+
+      <a class="scroll-cue" href="#jogo">
+        <span>Role para entrar na mesa</span>
+        <svg class="icon" aria-hidden="true">
+          <use href="#icon-chevron-down"></use>
+        </svg>
+      </a>
+    </section>
+
+    <!-- ============================================================
+         TICKER
+         ============================================================ -->
+    <div class="ticker" aria-hidden="true">
+      <div class="ticker-track">
+        <span>10 TURNOS</span><b>◆</b>
+        <span>32 CARTAS</span><b>◆</b>
+        <span>6 CURINGAS</span><b>◆</b>
+        <span>2 A 8 JOGADORES</span><b>◆</b>
+        <span>O DEUS MERCADO OBSERVA</span><b>◆</b>
+        <span>10 TURNOS</span><b>◆</b>
+        <span>32 CARTAS</span><b>◆</b>
+        <span>6 CURINGAS</span><b>◆</b>
+        <span>2 A 8 JOGADORES</span><b>◆</b>
+        <span>O DEUS MERCADO OBSERVA</span><b>◆</b>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         O JOGO
+         ============================================================ -->
+    <section class="section section-about" id="jogo">
+      <div class="container">
+        <div class="section-head" data-reveal>
+          <p class="eyebrow">A mesa está posta</p>
+          <h2>O capitalismo é um jogo.<br><span class="text-gradient">E você está no centro da mesa.</span></h2>
+          <p class="section-lead">Tormentalia é um card game de estratégia, blefe e sobrevivência para 2 a 8 jogadores.
+            Você comanda uma empresa em um mundo onde o mercado é uma divindade caprichosa: cada rodada cobra seu preço,
+            cada carta pode salvar ou afundar seu caixa.</p>
+        </div>
+
+        <div class="about-grid">
+          <div class="about-copy" data-reveal>
+            <p>Comece com <strong>R$ 2.000</strong>, sete cartas na mão e <strong>dez turnos</strong> para provar que
+              sua empresa merece existir. Jogue cartas de <strong>Ação, Efeito, Defesa e Curinga</strong>, arme defesas,
+              participe de leilões, fusões e lojinhas, e administre a satisfação e a produtividade do seu time.</p>
+            <p>No fim, só uma coisa importa: quem sai com mais dinheiro — ou quem ainda está de pé.</p>
+            <blockquote class="manifesto">
+              <svg class="icon quote-icon" aria-hidden="true">
+                <use href="#icon-quote"></use>
+              </svg>
+              <p>“O mercado dá, o mercado tira. Principalmente tira.”</p>
+              <cite>— O Deus Mercado</cite>
+            </blockquote>
+          </div>
+
+          <figure class="about-visual" data-reveal>
+            <div class="screenshot-frame">
+              <img src="assets/img/screens/mesa-local.png"
+                alt="Partida em rede de Tormentalia: sua mão de cartas na mesa e o rival CONVIDADO no topo" width="1280"
+                height="720" loading="lazy">
+              <span class="frame-corner frame-corner-tl"></span>
+              <span class="frame-corner frame-corner-tr"></span>
+              <span class="frame-corner frame-corner-bl"></span>
+              <span class="frame-corner frame-corner-br"></span>
+            </div>
+            <figcaption>
+              <span class="caption-dot"></span>
+              A mesa do Deus Mercado — partida em rede, cada um no seu aparelho.
+            </figcaption>
+            <div class="floating-badge">
+              <svg class="icon" aria-hidden="true">
+                <use href="#icon-users"></use>
+              </svg>
+              <span><strong>2–8</strong> jogadores</span>
+            </div>
+          </figure>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card" data-reveal>
+            <span class="feature-icon feature-icon-gold"><svg class="icon" aria-hidden="true">
+                <use href="#icon-cards"></use>
+              </svg></span>
+            <h3>32 cartas, 4 classes</h3>
+            <p>Ação, Efeito, Defesa e Curinga. Cada classe tem um papel, um ritmo e uma forma de quebrar a mesa.</p>
+          </article>
+          <article class="feature-card" data-reveal>
+            <span class="feature-icon feature-icon-pink"><svg class="icon" aria-hidden="true">
+                <use href="#icon-spark"></use>
+              </svg></span>
+            <h3>Cadeias de cartas</h3>
+            <p>Jogue cartas da mesma classe em sequência e ganhe até 2 jogadas extras por turno. Até 4 cartas.</p>
+          </article>
+          <article class="feature-card" data-reveal>
+            <span class="feature-icon feature-icon-cyan"><svg class="icon" aria-hidden="true">
+                <use href="#icon-shield"></use>
+              </svg></span>
+            <h3>Defesa ativa</h3>
+            <p>Arme uma defesa no slot e escolha defender ou receber o ataque. Bloqueie ou mitigue o dano.</p>
+          </article>
+          <article class="feature-card" data-reveal>
+            <span class="feature-icon feature-icon-gold"><svg class="icon" aria-hidden="true">
+                <use href="#icon-gavel"></use>
+              </svg></span>
+            <h3>Leilão, lojinha e fusão</h3>
+            <p>A cada 2 rodadas, o Deus Mercado abre o mercado: dê lances, compre cartas e crie Super Cartas.</p>
+          </article>
+          <article class="feature-card" data-reveal>
+            <span class="feature-icon feature-icon-green"><svg class="icon" aria-hidden="true">
+                <use href="#icon-heart"></use>
+              </svg></span>
+            <h3>Satisfação &amp; produtividade</h3>
+            <p>Satisfação em 0 é greve; em 200, dobra os efeitos. Produtividade multiplica sua renda.</p>
+          </article>
+          <article class="feature-card" data-reveal>
+            <span class="feature-icon feature-icon-violet"><svg class="icon" aria-hidden="true">
+                <use href="#icon-wifi"></use>
+              </svg></span>
+            <h3>Multiplayer de verdade</h3>
+            <p>Arena na mesma mesa ou partida em rede: de 2 a 8 jogadores, cada um no seu aparelho.</p>
+          </article>
+        </div>
+
+        <div class="stat-band" data-reveal>
+          <div class="stat"><strong>32</strong><span>cartas no baralho padrão</span></div>
+          <div class="stat"><strong>10</strong><span>turnos por partida</span></div>
+          <div class="stat"><strong>2–8</strong><span>jogadores na mesa</span></div>
+          <div class="stat"><strong>6</strong><span>curingas</span></div>
+          <div class="stat"><strong>3</strong><span>avatares jogáveis</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         MULTIPLAYER
+         ============================================================ -->
+    <section class="section section-modes" id="multiplayer">
+      <div class="container">
+        <div class="section-head" data-reveal>
+          <p class="eyebrow">Multiplayer</p>
+          <h2>Mais de um jeito<br><span class="text-gradient">de quebrar o mercado.</span></h2>
+          <p class="section-lead">Nesta versão o jogo é multiplayer: monte a mesa com a galera no mesmo aparelho ou abra
+            uma sala na rede. De 2 a 8 jogadores, do Duelo ao Caos Total.</p>
+        </div>
+
+        <div class="mode-grid">
+          <article class="mode-card mode-card-gold" data-reveal>
+            <span class="mode-icon"><svg class="icon" aria-hidden="true">
+                <use href="#icon-swords"></use>
+              </svg></span>
+            <h3>Arena</h3>
+            <p>Escolha quantos jogadores entram na mesma mesa — de <strong>DUELO</strong> (2) a <strong>CAOS
+                TOTAL</strong> (8). Turno para a direita e ninguém sai da mesa.</p>
+            <span class="mode-tag">2–8 jogadores · mesma mesa</span>
+          </article>
+          <article class="mode-card mode-card-violet" data-reveal>
+            <span class="mode-icon"><svg class="icon" aria-hidden="true">
+                <use href="#icon-wifi"></use>
+              </svg></span>
+            <h3>Partida em rede</h3>
+            <p>O anfitrião cria a sala e os outros conectam pelo IP na mesma rede. Cada um no seu aparelho, com sala de
+              espera e chat.</p>
+            <span class="mode-tag">2–8 jogadores · cada um no seu</span>
+          </article>
+        </div>
+
+        <div class="multiplayer-panel" data-reveal>
+          <div class="multiplayer-copy">
+            <p class="eyebrow">Como jogar junto</p>
+            <h3>Chame os amigos para falir junto.</h3>
+            <p>O anfitrião cria a sala e liga o hotspot. Os outros conectam no mesmo Wi-Fi e entram pelo IP. Ele inicia
+              quando todos estiverem prontos.</p>
+            <p class="multiplayer-note"><svg class="icon" aria-hidden="true">
+                <use href="#icon-wifi"></use>
+              </svg> Sem internet. Sem servidor. Só a mesa.</p>
+          </div>
+          <ol class="multiplayer-steps">
+            <li><span class="step-num">01</span>
+              <div>
+                <h4>Crie a sala</h4>
+                <p>Ligue o hotspot e toque em CRIAR SALA. O IP e a porta aparecem na tela.</p>
+              </div>
+            </li>
+            <li><span class="step-num">02</span>
+              <div>
+                <h4>Conecte</h4>
+                <p>Cada jogador entra pelo IP, no seu aparelho, e aparece na sala de espera.</p>
+              </div>
+            </li>
+            <li><span class="step-num">03</span>
+              <div>
+                <h4>Comece</h4>
+                <p>Todos prontos? O anfitrião inicia a partida e o mercado abre.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         DOCUMENTAÇÃO
+         ============================================================ -->
+    <section class="section section-docs" id="manuais">
+      <div class="container">
+        <div class="section-head section-head-row" data-reveal>
+          <div>
+            <p class="eyebrow">Documentação</p>
+            <h2>Estude a mesa<br><span class="text-gradient">em páginas próprias.</span></h2>
+            <p class="section-lead">Manual, baralho e avatares ficam em páginas separadas — para consultar sem tirar
+              você da partida.</p>
+          </div>
+          <span class="gallery-hint"><svg class="icon" aria-hidden="true">
+              <use href="#icon-book"></use>
+            </svg> 3 páginas de referência</span>
+        </div>
+
+        <div class="doc-grid">
+          <a class="doc-card doc-card-gold" href="manual.html" data-reveal>
+            <span class="doc-icon"><svg class="icon" aria-hidden="true">
+                <use href="#icon-book"></use>
+              </svg></span>
+            <span class="doc-num">01</span>
+            <h3>Manual do CEO</h3>
+            <p>Seis capítulos: objetivo, turno, cartas e classes, economia, avatares e multiplayer. Fecha com glossário.
+            </p>
+            <span class="doc-cta">Abrir manual <svg class="icon" aria-hidden="true">
+                <use href="#icon-arrow-right"></use>
+              </svg></span>
+          </a>
+
+          <a class="doc-card doc-card-pink" href="cartas.html" data-reveal>
+            <span class="doc-icon"><svg class="icon" aria-hidden="true">
+                <use href="#icon-cards"></use>
+              </svg></span>
+            <span class="doc-num">02</span>
+            <h3>As 32 cartas</h3>
+            <p>Galeria com filtro por classe, busca sem acentos e ficha completa de cada carta: chance, efeito e dica.
+            </p>
+            <span class="doc-cta">Ver o baralho <svg class="icon" aria-hidden="true">
+                <use href="#icon-arrow-right"></use>
+              </svg></span>
+          </a>
+
+          <a class="doc-card doc-card-cyan" href="avatares.html" data-reveal>
+            <span class="doc-icon"><svg class="icon" aria-hidden="true">
+                <use href="#icon-crown"></use>
+              </svg></span>
+            <span class="doc-num">03</span>
+            <h3>Avatares</h3>
+            <p>Taylor, Marx e Mayo. Cada um com uma habilidade passiva que muda o seu jeito de jogar.</p>
+            <span class="doc-cta">Escolher teórico <svg class="icon" aria-hidden="true">
+                <use href="#icon-arrow-right"></use>
+              </svg></span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         GALERIA DE SCREENSHOTS
+         ============================================================ -->
+    <section class="section section-gallery" id="galeria">
+      <div class="container">
+        <div class="section-head section-head-row" data-reveal>
+          <div>
+            <p class="eyebrow">Direto da mesa</p>
+            <h2>O jogo em ação.</h2>
+            <p class="section-lead">Arena com oito jogadores, sala de espera e partida em rede. Clique em uma imagem
+              para ampliar.</p>
+          </div>
+          <span class="gallery-hint"><svg class="icon" aria-hidden="true">
+              <use href="#icon-search"></use>
+            </svg> Clique para ampliar</span>
+        </div>
+
+        <div class="shot-grid">
+          <button class="shot-card" type="button" data-shot="0" aria-label="Ampliar screenshot: Arena com 8 jogadores">
+            <img src="assets/img/screens/arena.png" alt="Arena de Tormentalia com oito jogadores ao redor da mesa"
+              width="1280" height="720" loading="lazy">
+            <span class="shot-caption"><strong>Arena</strong><small>8 jogadores, caos total</small></span>
+          </button>
+          <button class="shot-card" type="button" data-shot="1" aria-label="Ampliar screenshot: tela de multiplayer">
+            <img src="assets/img/screens/lobby.png"
+              alt="Tela MULTIPLAYER com as opções criar sala e conectar com IP, para 2 a 8 jogadores" width="1280"
+              height="720" loading="lazy">
+            <span class="shot-caption"><strong>Multiplayer</strong><small>Crie a sala ou conecte pelo IP</small></span>
+          </button>
+          <button class="shot-card" type="button" data-shot="2" aria-label="Ampliar screenshot: sala de espera">
+            <img src="assets/img/screens/sala.png"
+              alt="Sala de espera com o IP do anfitrião, a lista de jogadores e o botão iniciar" width="1280"
+              height="720" loading="lazy">
+            <span class="shot-caption"><strong>Sala de espera</strong><small>IP, jogadores e botão
+                iniciar</small></span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         DOWNLOADS
+         ============================================================ -->
+    <section class="section section-downloads" id="downloads">
+      <div class="container">
+        <div class="download-hero" data-reveal>
+          <p class="eyebrow">Disponível agora</p>
+          <h2>Leve o Deus Mercado<br><span class="text-gradient">com você.</span></h2>
+          <p class="section-lead">Grátis para Windows e Android. Baixe, chame a galera e descubra quanto tempo a sua
+            empresa sobrevive.</p>
+        </div>
+
+        <div class="download-grid">
+          <article class="download-card download-windows" data-reveal>
+            <div class="download-top">
+              <span class="download-icon"><svg class="icon" aria-hidden="true">
+                  <use href="#icon-windows"></use>
+                </svg></span>
+              <span class="download-platform">Windows</span>
+              <span class="download-size">368 MB</span>
+            </div>
+            <h3>Pacote completo</h3>
+            <p>Executável + DLLs. Extraia o ZIP e rode <code>Tormentalia.exe</code>. Não precisa instalar.</p>
+            <ul class="download-list">
+              <li><svg class="icon" aria-hidden="true">
+                  <use href="#icon-check"></use>
+                </svg> Windows 10/11 64-bit</li>
+              <li><svg class="icon" aria-hidden="true">
+                  <use href="#icon-check"></use>
+                </svg> Teclado e mouse</li>
+              <li><svg class="icon" aria-hidden="true">
+                  <use href="#icon-check"></use>
+                </svg> ~1 GB de espaço livre</li>
+            </ul>
+            <a class="btn btn-gold btn-block" href="downloads/Tormentalia-Windows.zip" download>
+              <svg class="icon" aria-hidden="true">
+                <use href="#icon-download"></use>
+              </svg>
+              Baixar para Windows
+            </a>
+            
+          </article>
+
+          <article class="download-card download-android" data-reveal>
+            <div class="download-top">
+              <span class="download-icon"><svg class="icon" aria-hidden="true">
+                  <use href="#icon-android"></use>
+                </svg></span>
+              <span class="download-platform">Android</span>
+              <span class="download-size">381 MB</span>
+            </div>
+            <h3>Aplicativo Android</h3>
+            <p>Instale direto no aparelho. É um sideload: ative “Instalar apps desconhecidos” antes de abrir o APK.</p>
+            <ul class="download-list">
+              <li><svg class="icon" aria-hidden="true">
+                  <use href="#icon-check"></use>
+                </svg> Android 5.0+</li>
+              <li><svg class="icon" aria-hidden="true">
+                  <use href="#icon-check"></use>
+                </svg> Toque para jogar</li>
+              <li><svg class="icon" aria-hidden="true">
+                  <use href="#icon-check"></use>
+                </svg> ~1 GB de espaço livre</li>
+            </ul>
+            <a class="btn btn-pink btn-block" href="downloads/Tormentalia-release.apk" download>
+              <svg class="icon" aria-hidden="true">
+                <use href="#icon-download"></use>
+              </svg>
+              Baixar para Android
+            </a>
+            
+          </article>
+        </div>
+
+        <div class="download-note" data-reveal>
+          <svg class="icon" aria-hidden="true">
+            <use href="#icon-warning"></use>
+          </svg>
+          <p><strong>Windows:</strong> o <code>.exe</code> sozinho não funciona sem as DLLs. Use o ZIP completo.
+            <strong>Android:</strong> o APK é distribuído fora da Play Store; instale por sua conta e risco, como
+            qualquer sideload.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="assets/img/deus_mercado/deusmercado_interfereindo.png" alt="" width="52" height="52">
+        <div>
+          <strong>TORMENTALIA <span class="beta-badge">BETA</span></strong>
+          <p>Um jogo de cartas sobre capitalismo, teorias e sobrevivência.</p>
+        </div>
+      </div>
+      <nav class="footer-nav" aria-label="Navegação do rodapé">
+        <a href="index.html#jogo">O jogo</a>
+        <a href="index.html#multiplayer">Multiplayer</a>
+        <a href="manual.html">Manual</a>
+        <a href="cartas.html">Cartas</a>
+        <a href="avatares.html">Avatares</a>
+        <a href="sugestoes.html">Sugestões</a>
+        <a href="index.html#downloads">Downloads</a>
+      </nav>
+      <div class="footer-meta">
+        <p>Marcell Costa</p>
+        <p>© 2026 Tormentalia. Todos os direitos reservados.</p>
+        <a class="back-top" href="#inicio">Voltar ao topo <span aria-hidden="true">↑</span></a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       LIGHTBOX DE SCREENSHOTS
+       ============================================================ -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lightbox-caption" hidden>
+    <div class="lightbox-backdrop" data-close-lightbox></div>
+    <div class="lightbox-inner">
+      <button class="lightbox-close" type="button" data-close-lightbox aria-label="Fechar imagem">
+        <svg class="icon" aria-hidden="true">
+          <use href="#icon-close"></use>
+        </svg>
+      </button>
+      <button class="lightbox-nav lightbox-prev" type="button" id="lightbox-prev" aria-label="Imagem anterior">
+        <svg class="icon" aria-hidden="true">
+          <use href="#icon-arrow-left"></use>
+        </svg>
+      </button>
+      <figure>
+        <img id="lightbox-image" src="assets/img/screens/arena.webp" alt="" width="1280" height="720">
+        <figcaption id="lightbox-caption"></figcaption>
+      </figure>
+      <button class="lightbox-nav lightbox-next" type="button" id="lightbox-next" aria-label="Próxima imagem">
+        <svg class="icon" aria-hidden="true">
+          <use href="#icon-arrow-right"></use>
+        </svg>
+      </button>
+    </div>
+  </div>
+</body>
+
+</html>

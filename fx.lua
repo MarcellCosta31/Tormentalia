@@ -26,6 +26,16 @@ local flashAlfa = 1
 -- Decaimento do trauma por segundo (depois do pico, cai rapidamente).
 local TRAUMA_DECAI = 6
 
+-- Direcao do shake: (0,0) = aleatorio; quando definido, o tremor vai
+-- principalmente para la (ex.: carta voando para cima -> shake vertical).
+local dirX, dirY = 0, 0
+function fx.direcao(dx, dy)
+  dx, dy = dx or 0, dy or 0
+  local tam = math.sqrt(dx * dx + dy * dy)
+  if tam > 0 then dx, dy = dx / tam, dy / tam end
+  dirX, dirY = dx, dy
+end
+
 -- Congela a logica por `seg` segundos (impacto, falha, protecao, etc.).
 -- Em MODO_TESTE ignora (nao trava a suite).
 function fx.hitstop(seg)
@@ -92,8 +102,11 @@ function fx.offset()
   trauma = math.max(0, trauma - TRAUMA_DECAI * (1 / 60)) -- decaimento por frame aprox.
   if trauma < 0.01 then trauma = 0 end
 
-  local dx = math.floor((love.math.random() * 2 - 1) * intensidade * 12 + 0.5)
-  local dy = math.floor((love.math.random() * 2 - 1) * intensidade * 9 + 0.5)
+  -- 75% do deslocamento segue a direcao, 25% e jitter para nao ficar rigido.
+  local baseX = dirX * intensidade * 12 * 0.75
+  local baseY = dirY * intensidade * 9 * 0.75
+  local dx = math.floor(baseX + (love.math.random() * 2 - 1) * intensidade * 12 * 0.25 + 0.5)
+  local dy = math.floor(baseY + (love.math.random() * 2 - 1) * intensidade * 9 * 0.25 + 0.5)
   return dx, dy
 end
 

@@ -429,6 +429,34 @@ local function desenharTypewriter(oA)
   end
 end
 
+-- Apresentacao rapida (4.4): avatares deslizando das laterais com o nome.
+-- O rank fica para a intro dos avatares. Aparece durante toda a intro,
+-- deslizando nos primeiros segundos.
+local function desenharApresentacao(oA)
+  local n = #st.lista
+  if n < 2 then return end
+  local k = math.min(1, st.t / 1.2)
+  local e = anim.saidaExcesso(k)
+  local larg = math.min(150, (VW - 120) / n)
+  local x0 = (VW - n * larg) / 2
+  for i, p in ipairs(st.lista) do
+    local lado = (i % 2 == 1) and -1 or 1
+    local destX = x0 + (i - 1) * larg + larg / 2
+    local x = destX + lado * (1 - e) * VW * 0.6
+    local y = VH * 0.78
+    local img = p.avatar
+    if img then
+      local iw, ih = img:getDimensions()
+      local esc = math.min(90 / iw, 90 / ih)
+      love.graphics.setColor(1, 1, 1, oA)
+      love.graphics.draw(img, x - 45, y - 45, 0, esc, esc)
+    end
+    ui.txtCabe((p.nome or ""):upper(), x - 70, y + 52, 11, 140,
+      ui.hex "#FFD54F", "center", 8)
+  end
+  love.graphics.setColor(1, 1, 1, 1)
+end
+
 function I.desenhar()
   if not st then return end
   local oA = st.tw.overlay.v
@@ -452,6 +480,8 @@ function I.desenhar()
   desenharBrasas(oA)
   desenharRaios(oA)
   desenharVinheta(oA)
+
+  desenharApresentacao(oA)
 
   if st.fase == "intro" then
     desenharPergunta(oA)

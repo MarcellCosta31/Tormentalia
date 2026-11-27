@@ -48,12 +48,13 @@ local function serializarJogador(j, ehEu)
     -- distingue turno de humano remoto x IA preenchida).
     isIA = j.isIA and true or false,
     mao = ehEu and j.mao or cartasOcultas(#j.mao),
-    -- Area Segura com 3 slots: o cliente precisa da CONTAGEM (verso por
+    -- Area Segura com 1 slot: o cliente precisa da CONTAGEM (verso por
     -- carta guardada), nao so de "tem/não tem".
     areaSegura = ehEu and j.areaSegura or cartasOcultas(#j.areaSegura),
     -- Pilhas novas do manual (visual do cliente). O leilao e o Curinga
     -- global viajam no snapshot; lojinha/fusao continuam fora da rede.
-    defesas = j.defesas or {},
+    -- Defesa do oponente tambem e secreta: vai so a contagem (verso).
+    defesas = ehEu and (j.defesas or {}) or cartasOcultas(#(j.defesas or {})),
     pilhaJogadas = j.pilhaJogadas or {},
     pilhaCuringa = j.pilhaCuringa or {},
     receitas = j.receitas or 0,

@@ -313,15 +313,15 @@ function M.painelOponente(opts)
   ui.caixaTracejada(sx2, my, sw, sh, 4, ui.hex "#1E1E32", 0.45,
     ui.C.OURO, 0.85, 1.5, 4, 3)
   if opts.defesa and opts.defesa.carta then
-    ui.carta(opts.defesa.carta, sx1 + 1, my + 1, sw - 2, sh - 2,
-      { preencherArte = true })
+    -- O oponente so ve o dorso: a carta de defesa e secreta.
+    ui.verso(sx1 + 1, my + 1, sw - 2, sh - 2, { dobra = 1 })
   else
     desenharEscudo(sx1 + sw / 2, my + sh / 2, sw * 0.62, ui.C.OURO)
   end
   local area = opts.area or {}
   if #area > 0 then
-    ui.carta(area[#area], sx2 + 1, my + 1, sw - 2, sh - 2,
-      { preencherArte = true })
+    -- Área Segura do oponente tambem fica oculta (so a face e visivel ao dono).
+    ui.verso(sx2 + 1, my + 1, sw - 2, sh - 2, { dobra = 1 })
   else
     desenharCadeado(sx2 + sw / 2, my + sh / 2, sw * 0.62, ui.C.OURO)
   end

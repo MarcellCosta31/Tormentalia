@@ -708,17 +708,12 @@ local function testarAreaSegura()
   check(#j.mao == 7, "carta saiu da mao (8 -> " .. #j.mao .. ")")
   check(#j.areaSegura == 1, "area segura guarda 1 carta")
   check(j.areaSegura[1].uid == uid, "carta certa na area")
-  check(jogo.AREA_SEGURA_MAX == 3, "area segura tem 3 slots")
+  check(jogo.AREA_SEGURA_MAX == 1, "area segura tem 1 slot")
 
-  -- Cabem 3: a 2a e a 3a entram, a 4a nao.
-  local outro = j.mao[1].uid
-  check(jogo.colocarAreaSegura(p, 1, outro) == true, "area guarda a 2a carta")
-  local terceiro = j.mao[1].uid
-  check(jogo.colocarAreaSegura(p, 1, terceiro) == true, "area guarda a 3a carta")
-  check(#j.areaSegura == 3, "area segura guarda 3 cartas")
-  check(p.jogadasTurno == 0, "guardar 3 cartas no mesmo turno nao consome quota")
-  check(jogo.colocarAreaSegura(p, 1, j.mao[1].uid) == false, "area cheia nao guarda a 4a")
-  check(#j.areaSegura == 3, "area continua com 3 cartas")
+  -- Cabe 1 carta so: a 2a nao entra.
+  check(p.jogadasTurno == 0, "guardar nao consome quota")
+  check(jogo.colocarAreaSegura(p, 1, j.mao[1].uid) == false, "area cheia nao guarda a 2a")
+  check(#j.areaSegura == 1, "area continua com 1 carta")
   check(jogo.colocarAreaSegura(p, 1, "uid-invalido") == false, "uid invalido nao guarda")
 
   -- Jogar da Area Segura: aplica o efeito sem consumir a quota.
@@ -729,15 +724,10 @@ local function testarAreaSegura()
   check(res.sucesso == true and j.saldo == antes + 10, "efeito aplicado (+10)")
   check(res.consumiuTurno == false, "jogada da area nao encerra o turno")
   check(p.jogadasTurno == 1, "quota intacta apos jogar da area (" .. p.jogadasTurno .. ")")
-  check(#j.areaSegura == 2, "area perdeu a carta jogada (2 restantes)")
+  check(#j.areaSegura == 0, "area vazia depois de jogar a carta")
   check(p.pilhaDescarte[#p.pilhaDescarte].uid == uid, "carta da area foi pro descarte")
   check(p.log[#p.log]:find("da Area Segura", 1, true) ~= nil,
     "log marca origem da Area Segura")
-
-  -- As outras duas tambem saem, uma por uma.
-  jogo.jogarAreaSegura(p, 1, outro)
-  jogo.jogarAreaSegura(p, 1, terceiro)
-  check(#j.areaSegura == 0, "area vazia depois de jogar as 3")
 
   check(jogo.jogarAreaSegura(p, 1, "uid-invalido") == nil, "jogar da area com uid invalido = nil")
 
@@ -852,21 +842,14 @@ local function testarIAGuardarArea()
 
   check(jogo.colocarAreaSegura(p, 2, uid) == true, "IA guardou a carta")
   check(#ia.areaSegura == 1, "area da IA com 1 carta")
-  local uid2 = jogo.iaGuardarCarta(p, 2)
-  check(uid2 ~= nil, "com 1 carta a IA ainda escolhe outra")
-  check(jogo.colocarAreaSegura(p, 2, uid2) == true, "IA guardou a 2a carta")
-  local uid3 = jogo.iaGuardarCarta(p, 2)
-  check(uid3 ~= nil, "com 2 cartas a IA ainda escolhe a 3a")
-  check(jogo.colocarAreaSegura(p, 2, uid3) == true, "IA guardou a 3a carta")
-  check(#ia.areaSegura == 3, "area da IA com 3 cartas")
-  check(jogo.iaGuardarCarta(p, 2) == nil, "area cheia (3) nao volta a escolher")
+  check(jogo.iaGuardarCarta(p, 2) == nil, "area cheia (1) nao escolhe outra carta")
 
   -- Manual V7 4.2: carta so no proprio turno da IA.
   p.vez = 2
   local res = jogo.jogarAreaSegura(p, 2, uid)
   check(res ~= nil, "IA puxou e jogou a carta da Area Segura")
   check(res.consumiuTurno == false, "carta da Area nao consome a quota")
-  check(#ia.areaSegura == 2, "area com 2 depois de puxar 1")
+  check(#ia.areaSegura == 0, "area vazia depois de puxar a carta")
   check(#p.pilhaDescarte > 0, "carta da Area foi para o descarte")
 
   local p2 = jogo.criarPartida({ n = 4 })
@@ -1133,13 +1116,13 @@ local function testarTetoMao()
   while #j.areaSegura < jogo.AREA_SEGURA_MAX do
     table.insert(j.areaSegura, table.remove(j.mao))
   end
-  check(jogo.tetoMao(p, j) == jogo.CARTAS_POR_MAO,
-    "banco cheio: mao limitada em 7")
+  check(jogo.tetoMao(p, j) == 9,
+    "1 slot cheio: mao limitada em 9")
   p.eventoMeta = true
   check(jogo.tetoMao(p, j) == math.huge,
     "durante o evento do Deus Mercado o teto e excedido")
   p.eventoMeta = false
-  check(jogo.tetoMao(p, j) == jogo.CARTAS_POR_MAO, "fora do evento o teto volta")
+  check(jogo.tetoMao(p, j) == 9, "fora do evento o teto volta")
 end
 
 local function testarTurnoExclusivoDasCartas()
@@ -1309,10 +1292,11 @@ local function testarFusao()
 
   -- Fusao tambem consome cartas do banco (Area Segura).
   local j2 = p.jogadores[2]
-  while #j2.areaSegura < 2 do
+  while #j2.areaSegura < 1 do
     table.insert(j2.areaSegura, table.remove(j2.mao))
   end
-  local bancos = { j2.areaSegura[1].uid, j2.areaSegura[2].uid }
+  -- Com um so slot no banco, a fusao mistura 1 carta guardada + 1 da mao.
+  local bancos = { j2.areaSegura[1].uid, j2.mao[1].uid }
   local super2 = jogo.executarFusao(p, 2, bancos)
   check(super2 ~= nil, "fusao consome cartas do banco")
   check(#j2.areaSegura == 0, "banco esvaziado pela fusao")
@@ -3291,15 +3275,12 @@ local function testarPartidaRede()
   check(rG.ok and p3.jogadores[1].areaSegura[1] ~= nil, "GUARDAR guarda")
   check(p3.vez == 1 and #p3.jogadores[1].mao == maoCheia3 - 1,
     "GUARDAR NAO encerra o turno")
-  check(partidaRede.aplicarAcao(p3, 1,
+  check(not partidaRede.aplicarAcao(p3, 1,
     { tipo = "GUARDAR", uid = p3.jogadores[1].mao[1].uid }).ok,
-    "GUARDAR a 2a carta no mesmo turno")
-  check(partidaRede.aplicarAcao(p3, 1,
-    { tipo = "GUARDAR", uid = p3.jogadores[1].mao[1].uid }).ok,
-    "GUARDAR a 3a carta no mesmo turno")
-  check(#p3.jogadores[1].areaSegura == 3 and p3.vez == 1
+    "GUARDAR a 2a carta recusa (area tem 1 slot)")
+  check(#p3.jogadores[1].areaSegura == 1 and p3.vez == 1
     and p3.jogadasTurno == 0,
-    "3 GUARDAR no mesmo turno nao encerram nem consomem quota")
+    "GUARDAR nao encerra nem consome quota")
   local rPE = partidaRede.aplicarAcao(p3, 2, { tipo = "PASSAR" })
   check(not rPE.ok, "PASSAR fora da vez recusa")
   local rP = partidaRede.aplicarAcao(p3, 1, { tipo = "PASSAR" })
@@ -3881,6 +3862,20 @@ local function testarSelecaoCiclos()
     "tutorial: mao garante a vitoria do jogador")
   onb.vitoria()
   check(onb.finalizado() == true, "tutorial: vitoria marca como concluido")
+
+  -- Game feel / IA personalizada / aprendizado (melhorias 1.x, 8.x, 9.1).
+  local gf = require "gamefeel"
+  check(gf.corBordaMao(0) == nil, "chain: sem combo sem cor extra")
+  check(gf.corBordaMao(2) ~= nil and gf.corBordaMao(4) ~= gf.corBordaMao(2),
+    "chain: borda muda de cor conforme o combo")
+  local im = require "ia_memoria"
+  check(im.partidas() == 0 and im.contra() == nil,
+    "ia: sem aprendizagem antes de 5 partidas em MODO_TESTE")
+  local pIA = jogo.criarPartida({ n = 4 })
+  jogo.definirEstilos(pIA)
+  check(pIA.jogadores[2].estilo ~= nil and pIA.jogadores[4].estilo ~= nil,
+    "ia: personalidades atribuidas por assento")
+  check(#jogo.ESTILOS_IA == 4, "ia: 4 estilos disponiveis")
 end
 
 function T.rodar()

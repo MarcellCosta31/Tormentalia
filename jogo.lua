@@ -29,7 +29,7 @@ local CHAIN_CLASSES = {        -- classes que formam chain entre si
 }
 -- Quantas cartas cabem na Area Segura. Era 1: com 3 o jogador pode estocar
 -- (e a IA tambem) e usar fora do turno sem gastar a quota.
-local AREA_SEGURA_MAX = 3
+local AREA_SEGURA_MAX = 1
 -- Teto total de cartas (manual 4.4): 7 de mao + 3 de banco = 10. So o
 -- evento (leilao/lojinha/fusao) pode exceder esse numero.
 local CARTAS_MAX_TOTAL = 10
@@ -823,7 +823,7 @@ function J.ehDefesa(c)
   return c ~= nil and (c.classe == "Defesa" or c.tipo == "PROTECAO")
 end
 
--- Manual V7 4.4: maximo de 10 cartas por jogador (7 de mao + 3 de banco).
+-- Manual V7 4.4: maximo de 10 cartas por jogador (7 de mao + 1 de banco).
 -- Durante o evento do Deus Mercado (leilao/lojinha/fusao) esse teto pode ser
 -- excedido. O teto e sobre o TOTAL: com o banco cheio, a mao fica em 7.
 function J.tetoMao(p, j)
@@ -1278,7 +1278,7 @@ end
 -- jogarCartaAreaSegura1v1)
 -- ============================================================
 
--- Move uma carta da mao para a Area Segura (maximo AREA_SEGURA_MAX = 3).
+-- Move uma carta da mao para a Area Segura (maximo AREA_SEGURA_MAX = 1).
 -- Devolve true se guardou; false se nao (cheia/invalida).
 function J.colocarAreaSegura(p, indiceJogador, cartaUid)
   local j = p.jogadores[indiceJogador]
@@ -2205,7 +2205,20 @@ end
 -- IA
 -- ============================================================
 
-local function notaCarta(c, ia)
+-- Personalidades de IA (8.1): cada estilo altera o valor das cartas.
+J.ESTILOS_IA = { "agressivo", "defensivo", "oportunista", "caotico" }
+
+function J.definirEstilos(p)
+  if not p or not p.jogadores then return end
+  for i = 2, #p.jogadores do
+    local j = p.jogadores[i]
+    if j and j.isIA and not j.estilo then
+      j.estilo = J.ESTILOS_IA[(i - 2) % #J.ESTILOS_IA + 1]
+    end
+  end
+end
+
+local function notaCarta(c, ia, p)
   local chance = c.chanceSucesso or 1
   local e = c.efeito
   local t = e and e.tipo
@@ -2232,6 +2245,28 @@ local function notaCarta(c, ia)
 
   if c.tipo == "CORINGA" then nota = nota + 15 end
   if c.tipo == "EFEITO" then nota = nota + 5 end
+
+  local estilo = ia.estilo
+  if estilo == "agressivo" then
+    if J.ehDefesa(c) then nota = nota - 45
+    elseif cartas.ehCartaNegativa(c) then nota = nota + 25 end
+  elseif estilo == "defensivo" then
+    if J.ehDefesa(c) then nota = nota + 45
+    elseif cartas.ehCartaNegativa(c) then nota = nota - 20 end
+  elseif estilo == "oportunista" then
+    if c.classe and ia.chainClasse == c.classe then nota = nota + 40 end
+    if chance < 0.5 then nota = nota - 30 end
+  elseif estilo == "caotico" then
+    return love.math.random() * 100
+  end
+
+  -- IA que aprende (8.2): contra-ataca o padrao do jogador.
+  if p and p.contraEstilo == "agressivo" and c.id == 9 then
+    nota = nota + 120  -- Queima de Estoque contra quem guarda defesas
+  elseif p and p.contraEstilo == "defensivo" and J.ehDefesa(c) then
+    nota = nota + 60   -- protecao contra quem ataca muito
+  end
+
   return nota + love.math.random() * 6
 end
 
@@ -2243,7 +2278,7 @@ function J.jogadaIA(p, idx)
 
   local melhor, melhorNota = nil, -math.huge
   for i, c in ipairs(ia.mao) do
-    local nota = notaCarta(c, ia)
+    local nota = notaCarta(c, ia, p)
     if nota > melhorNota then
       melhor, melhorNota = i, nota
     end
